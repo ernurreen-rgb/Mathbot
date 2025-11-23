@@ -5,3 +5,5 @@
 # Next.js build output
 /.next
 /out
+# TypeScript build info
+*.tsbuildinfo
