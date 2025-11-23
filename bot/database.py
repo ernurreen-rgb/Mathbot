@@ -26,6 +26,15 @@ async def init_db() -> None:
                 registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS web_users (
+                email TEXT PRIMARY KEY,
+                name TEXT,
+                google_id TEXT UNIQUE,
+                points INTEGER DEFAULT 0,
+                solved_count INTEGER DEFAULT 0,
+                registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 image_path TEXT NOT NULL,
@@ -43,6 +52,14 @@ async def init_db() -> None:
                 attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, task_id)
             );
+
+            CREATE TABLE IF NOT EXISTS web_user_solutions (
+                email TEXT,
+                task_id INTEGER,
+                is_correct BOOLEAN,
+                attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (email, task_id)
+            );
         """)
 
         # Индекстер – жылдамдық үшін өте маңызды!
@@ -50,6 +67,8 @@ async def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_us_user ON user_solutions(user_id);
             CREATE INDEX IF NOT EXISTS idx_us_task ON user_solutions(task_id);
             CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
+            CREATE INDEX IF NOT EXISTS idx_wus_email ON web_user_solutions(email);
+            CREATE INDEX IF NOT EXISTS idx_wus_task ON web_user_solutions(task_id);
         """)
 
         # Миграциялар (ескі базаларға)
@@ -97,21 +116,69 @@ async def get_user_stats(user_id: int) -> Optional[Dict[str, Any]]:
             return dict(row) if row else None
 
 
-async def get_top_users(limit: int = 10) -> List[Dict[str, Any]]:
-    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
-        conn.row_factory = aiosqlite.Row
-        async with conn.execute(
-                "SELECT user_id, username, full_name, points, solved_count FROM users "
-                "ORDER BY points DESC, solved_count DESC LIMIT ?", (limit,)
-        ) as cur:
-            return [dict(row) for row in await cur.fetchall()]
-
-
 async def get_all_users() -> List[Dict[str, Any]]:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         async with conn.execute("SELECT * FROM users ORDER BY points DESC") as cur:
             return [dict(row) for row in await cur.fetchall()]
+
+
+# ==================== WEB ПАЙДАЛАНУШЫЛАР ====================
+async def ensure_web_user(email: str, name: str, google_id: str) -> None:
+    """Веб қолданушыны қосу немесе жаңарту"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        
+        row = await (await conn.execute("SELECT 1 FROM web_users WHERE email = ?", (email,))).fetchone()
+        if row:
+            await conn.execute(
+                "UPDATE web_users SET name = ?, google_id = ? WHERE email = ?",
+                (name, google_id, email)
+            )
+        else:
+            await conn.execute(
+                "INSERT INTO web_users (email, name, google_id) VALUES (?, ?, ?)",
+                (email, name, google_id)
+            )
+        await conn.commit()
+
+
+async def get_web_user_stats(email: str) -> Optional[Dict[str, Any]]:
+    """Веб қолданушының статистикасын алу"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        async with conn.execute("SELECT * FROM web_users WHERE email = ?", (email,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+
+async def get_top_users(limit: int = 10) -> List[Dict[str, Any]]:
+    """Telegram және веб қолданушыларының рейтингі"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        
+        # Telegram қолданушылары
+        telegram_users = []
+        async with conn.execute(
+            "SELECT user_id, username, full_name, points, solved_count, 'telegram' as source FROM users "
+            "ORDER BY points DESC, solved_count DESC"
+        ) as cur:
+            telegram_users = [dict(row) for row in await cur.fetchall()]
+        
+        # Веб қолданушылары
+        web_users = []
+        async with conn.execute(
+            "SELECT email, name, points, solved_count, 'web' as source FROM web_users "
+            "ORDER BY points DESC, solved_count DESC"
+        ) as cur:
+            web_users = [dict(row) for row in await cur.fetchall()]
+        
+        # Барлық қолданушыларды біріктіру және сұрыптау
+        all_users = telegram_users + web_users
+        all_users.sort(key=lambda x: (x['points'], x['solved_count']), reverse=True)
+        
+        # Limit қолдану
+        return all_users[:limit]
 
 
 # ==================== ЕСЕПТЕР ====================
@@ -223,6 +290,55 @@ async def mark_attempted(user_id: int, task_id: int) -> None:
             (user_id, task_id)
         )
         await conn.commit()
+
+
+# ==================== WEB ШЕШІМДЕР ====================
+async def mark_web_solved_and_add_point(email: str, task_id: int) -> None:
+    """Веб қолданушы есепті дұрыс шешкен кезде"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        await conn.execute(
+            "INSERT OR REPLACE INTO web_user_solutions (email, task_id, is_correct) VALUES (?, ?, 1)",
+            (email, task_id)
+        )
+        await conn.execute(
+            "UPDATE web_users SET points = points + 1, solved_count = solved_count + 1 WHERE email = ?",
+            (email,)
+        )
+        await conn.commit()
+
+
+async def mark_web_attempted(email: str, task_id: int) -> None:
+    """Веб қолданушы есепті қате шешкен кезде"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        await conn.execute(
+            "INSERT OR IGNORE INTO web_user_solutions (email, task_id, is_correct) VALUES (?, ?, 0)",
+            (email, task_id)
+        )
+        await conn.commit()
+
+
+async def has_web_solved(email: str, task_id: int) -> bool:
+    """Веб қолданушы есепті бұрын шешкен бе"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        async with conn.execute(
+                "SELECT 1 FROM web_user_solutions WHERE email = ? AND task_id = ?",
+                (email, task_id)
+        ) as cur:
+            return await cur.fetchone() is not None
+
+
+async def get_random_unsolved_task_web(email: str) -> Optional[Dict[str, Any]]:
+    """Веб қолданушы үшін шешілмеген кездейсоқ есепті алу"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        async with conn.execute("""
+            SELECT t.* FROM tasks t
+            LEFT JOIN web_user_solutions wus ON t.id = wus.task_id AND wus.email = ?
+            WHERE wus.task_id IS NULL
+            ORDER BY RANDOM() LIMIT 1
+        """, (email,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
 
 
 async def get_bot_statistics() -> Dict[str, int]:

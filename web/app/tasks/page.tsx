@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface Task {
   id: number;
@@ -18,6 +19,7 @@ interface CheckResult {
 }
 
 export default function TasksPage() {
+  const { data: session } = useSession();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetchRandomTask();
-  }, []);
+  }, [session]);
 
   const fetchRandomTask = async () => {
     setLoading(true);
@@ -38,7 +40,11 @@ export default function TasksPage() {
     setShowSolution(false);
     setUserAnswer("");
     try {
-      const res = await fetch(`${apiUrl}/api/task/random`);
+      // Include email for logged-in users to get personalized unsolved tasks
+      const url = session?.user?.email 
+        ? `${apiUrl}/api/task/random?email=${encodeURIComponent(session.user.email)}`
+        : `${apiUrl}/api/task/random`;
+      const res = await fetch(url);
       if (!res.ok) {
         if (res.status === 404) {
           throw new Error("Есептер табылмады. Әзірше есептер қосылмаған.");
@@ -68,7 +74,8 @@ export default function TasksPage() {
         body: JSON.stringify({
           task_id: task.id,
           answer: answer,
-          user_id: 0
+          user_id: 0,
+          email: session?.user?.email || ""
         })
       });
       

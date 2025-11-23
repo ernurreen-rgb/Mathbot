@@ -104,11 +104,17 @@ export default function RatingPage() {
               {users.map((user, index) => {
                 const position = index + 1;
                 const isTopThree = position <= 3;
-                const displayName = user.username || user.full_name || `User ${user.user_id}`;
+                // Handle both Telegram and Web users
+                let displayName = '';
+                if (user.source === 'telegram') {
+                  displayName = user.username || user.full_name || `User ${user.user_id}`;
+                } else {
+                  displayName = user.name || user.email;
+                }
                 
                 return (
                   <div
-                    key={user.user_id}
+                    key={user.source === 'telegram' ? `tg-${user.user_id}` : `web-${user.email}`}
                     className={`flex items-center justify-between p-4 rounded-lg transition ${
                       isTopThree
                         ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 shadow-md'
@@ -123,8 +129,11 @@ export default function RatingPage() {
                         <p className={`font-bold ${isTopThree ? 'text-lg' : 'text-base'} text-gray-800`}>
                           {displayName}
                         </p>
-                        {user.username && user.full_name && (
+                        {user.source === 'telegram' && user.username && user.full_name && (
                           <p className="text-sm text-gray-500">@{user.username}</p>
+                        )}
+                        {user.source === 'web' && (
+                          <p className="text-sm text-gray-500">{user.email}</p>
                         )}
                       </div>
                     </div>

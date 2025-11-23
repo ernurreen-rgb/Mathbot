@@ -39,10 +39,20 @@ class AnswerSubmission(BaseModel):
     task_id: int
     answer: str
     user_id: int = 0  # Default to anonymous user
+    email: str = ""  # For web users
+
+class WebUserInfo(BaseModel):
+    email: str
+    name: str
+    google_id: str
 
 @app.get("/api/task/random")
-async def get_random_task():
-    task = await db.get_random_unsolved_task(0)  # user_id=0 — для публичного API
+async def get_random_task(email: str = ""):
+    """Get random unsolved task for user"""
+    if email:
+        task = await db.get_random_unsolved_task_web(email)
+    else:
+        task = await db.get_random_unsolved_task(0)  # user_id=0 — для публичного API
     if not task:
         raise HTTPException(status_code=404, detail="No tasks found")
     # Только нужные поля
@@ -70,7 +80,7 @@ async def get_user_stats(user_id: int):
 
 @app.post("/api/task/check")
 async def check_answer(submission: AnswerSubmission):
-    """Check if answer is correct"""
+    """Check if answer is correct and update user progress"""
     task = await db.get_task(submission.task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -80,11 +90,40 @@ async def check_answer(submission: AnswerSubmission):
     
     is_correct = user_answer == correct_answer
     
+    # Update progress for web users
+    if submission.email:
+        # Ensure web user exists
+        await db.ensure_web_user(submission.email, submission.email.split('@')[0], submission.email)
+        
+        if is_correct:
+            # Check if already solved
+            if not await db.has_web_solved(submission.email, submission.task_id):
+                await db.mark_web_solved_and_add_point(submission.email, submission.task_id)
+        else:
+            await db.mark_web_attempted(submission.email, submission.task_id)
+    
     return {
         "correct": is_correct,
         "correct_answer": task["correct_option"] if not is_correct else None,
         "solution_image_path": task.get("solution_image_path")
     }
+
+@app.post("/api/user/web")
+async def create_or_update_web_user(user: WebUserInfo):
+    """Create or update web user"""
+    await db.ensure_web_user(user.email, user.name, user.google_id)
+    stats = await db.get_web_user_stats(user.email)
+    return stats
+
+@app.get("/api/user/web/{email}")
+async def get_web_user_stats_endpoint(email: str):
+    """Get web user statistics"""
+    stats = await db.get_web_user_stats(email)
+    if not stats:
+        # Create user if not exists
+        await db.ensure_web_user(email, email.split('@')[0], email)
+        stats = await db.get_web_user_stats(email)
+    return stats
 
 def validate_and_get_file_path(filename: str, base_dir: Path) -> Path:
     """
