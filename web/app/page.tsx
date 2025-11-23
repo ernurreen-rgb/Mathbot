@@ -1,6 +1,12 @@
 // web/app/page.tsx
+"use client";
+
+import { useSession } from "next-auth/react";
+import GoogleLogin from "@/components/GoogleLogin";
 
 export default function Home() {
+  const { data: session } = useSession();
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="text-center max-w-3xl">
@@ -39,6 +45,18 @@ export default function Home() {
             👤 Профиль
           </a>
         </div>
+
+        {/* Google Login */}
+        {!session && (
+          <div className="flex flex-col items-center gap-4 my-8">
+            <div className="bg-white p-8 rounded-3xl shadow-2xl border border-blue-100">
+              <p className="text-gray-700 mb-4 font-semibold">
+                Прогресс сақтау үшін Google арқылы кіріңіз
+              </p>
+              <GoogleLogin />
+            </div>
+          </div>
+        )}
 
         {/* Төменгі статистика */}
         <div className="mt-20 text-gray-500 text-sm md:text-base">

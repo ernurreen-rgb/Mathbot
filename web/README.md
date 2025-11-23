@@ -44,13 +44,33 @@ Bot сервері келесі API endpoints қамтамасыз етеді:
 Веб-сайт үшін `.env.local` файлын құрыңыз:
 
 ```bash
+# API URL
 NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key-here
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
+
+`NEXTAUTH_SECRET` генерациялау:
+```bash
+openssl rand -base64 32
+```
+
+Google OAuth конфигурациясы үшін [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md) қараңыз.
 
 Production үшін:
 
 ```bash
 NEXT_PUBLIC_API_URL=https://your-bot-server.com
+NEXTAUTH_URL=https://yourdomain.com
+NEXTAUTH_SECRET=your-production-secret
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
 
 ## Deployment
@@ -70,4 +90,5 @@ Bot серверді кез келген хостингке deploy жасауғ�
 - ✅ Рейтинг көрсету
 - ✅ Жауаптарды тексеру
 - ✅ Шешімдерді көрсету
+- ✅ Google OAuth аутентификациясы
 - 🔄 Профиль (болашақта)
