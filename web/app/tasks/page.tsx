@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 
 interface Task {
   id: number;
@@ -24,7 +23,8 @@ export default function TasksPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:8000/api/task/random");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/api/task/random`);
       if (!res.ok) {
         throw new Error("Есептер табылмады");
       }
@@ -89,7 +89,7 @@ export default function TasksPage() {
 
           <div className="mb-8">
             <img
-              src={`http://localhost:8000/${task.image_path}`}
+              src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/${task.image_path}`}
               alt={`Есеп ${task.id}`}
               className="w-full rounded-lg shadow-md"
             />
