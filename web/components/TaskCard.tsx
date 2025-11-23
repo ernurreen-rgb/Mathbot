@@ -7,7 +7,7 @@ export default function TaskCard() {
 
 
   // URL FastAPI backend (production)
-  const API_URL = "https://mathbot-nu.vercel.app/api/task/random";
+  const API_URL = "https://mathbot-git-copilot-fix-telegram-login-issue-yera1.vercel.app/";
 
   const getTask = async () => {
     try {
