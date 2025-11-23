@@ -338,7 +338,7 @@ async def cmd_rating(message: Message):
     for i, r in enumerate(top, 1):
         # Handle both Telegram and web users
         if r["source"] == "web":
-            name = r["name"] or r["email"]
+            name = r["name"] or r["email"] or "Web User"
         else:
             name = r["username"] or r["full_name"] or str(r["user_id"])
         lines.append(f"{i}. {name} — {r['points']}")
