@@ -1,4 +1,4 @@
-// web/app/api/auth/telegram/route.ts
+// web/app/login/telegram/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
