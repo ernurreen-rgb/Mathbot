@@ -86,18 +86,27 @@ async def check_answer(submission: AnswerSubmission):
         "solution_image_path": task.get("solution_image_path")
     }
 
-@app.get("/images/{filename}")
-async def serve_image(filename: str):
-    """Serve task images"""
+def validate_and_get_file_path(filename: str, base_dir: Path) -> Path:
+    """
+    Validate filename and return safe file path within base directory.
+    Raises HTTPException if validation fails.
+    """
     # Validate filename to prevent path traversal
     if '/' in filename or '\\' in filename or filename.startswith('..'):
         raise HTTPException(status_code=400, detail="Invalid filename")
     
-    file_path = IMAGES_DIR / filename
-    # Ensure the resolved path is still within IMAGES_DIR
-    if not file_path.resolve().is_relative_to(IMAGES_DIR.resolve()):
+    file_path = base_dir / filename
+    # Ensure the resolved path is still within base_dir
+    # Use cached resolved base_dir for better performance
+    if not file_path.resolve().is_relative_to(base_dir):
         raise HTTPException(status_code=400, detail="Invalid file path")
     
+    return file_path
+
+@app.get("/images/{filename}")
+async def serve_image(filename: str):
+    """Serve task images"""
+    file_path = validate_and_get_file_path(filename, IMAGES_DIR)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(file_path)
@@ -105,15 +114,7 @@ async def serve_image(filename: str):
 @app.get("/solutions/{filename}")
 async def serve_solution(filename: str):
     """Serve solution images"""
-    # Validate filename to prevent path traversal
-    if '/' in filename or '\\' in filename or filename.startswith('..'):
-        raise HTTPException(status_code=400, detail="Invalid filename")
-    
-    file_path = SOLUTIONS_DIR / filename
-    # Ensure the resolved path is still within SOLUTIONS_DIR
-    if not file_path.resolve().is_relative_to(SOLUTIONS_DIR.resolve()):
-        raise HTTPException(status_code=400, detail="Invalid file path")
-    
+    file_path = validate_and_get_file_path(filename, SOLUTIONS_DIR)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Solution not found")
     return FileResponse(file_path)
