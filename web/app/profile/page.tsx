@@ -263,7 +263,7 @@ export default function ProfilePage() {
                   )}
                   {!stats?.nickname && !isEditingNickname && (
                     <p className="text-sm text-gray-600 mt-2">
-                      💡 Никнейм орнатсаңыз, рейтингте email-дің орнына никнейм көрсетіледі
+                      💡 Рейтингте көрінуі үшін никнейм орнату міндетті
                     </p>
                   )}
                 </div>

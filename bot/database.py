@@ -175,6 +175,7 @@ async def get_top_users(limit: int = 10) -> List[Dict[str, Any]]:
         conn.row_factory = aiosqlite.Row
         
         # UNION query to combine both user types and sort in database
+        # Web users must have a nickname to appear in rating
         async with conn.execute(
             """
             SELECT user_id, username, full_name, NULL as email, NULL as name, NULL as nickname,
@@ -184,6 +185,7 @@ async def get_top_users(limit: int = 10) -> List[Dict[str, Any]]:
             SELECT NULL as user_id, NULL as username, NULL as full_name, 
                    email, name, nickname, points, solved_count, 'web' as source
             FROM web_users
+            WHERE nickname IS NOT NULL AND nickname != ''
             ORDER BY points DESC, solved_count DESC
             LIMIT ?
             """, (limit,)
