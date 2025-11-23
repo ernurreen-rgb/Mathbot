@@ -156,10 +156,10 @@ async def get_web_user_stats(email: str) -> Optional[Dict[str, Any]]:
 async def update_web_user_nickname(email: str, nickname: str) -> None:
     """Веб қолданушының никнеймін жаңарту"""
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
-        # Validate nickname length (max 30 characters)
+        # Validate and clean nickname
         cleaned_nickname = nickname.strip() if nickname else None
         if cleaned_nickname and len(cleaned_nickname) > 30:
-            cleaned_nickname = cleaned_nickname[:30]
+            raise ValueError("Никнейм 30 таңбадан аспауы керек")
         
         await conn.execute(
             "UPDATE web_users SET nickname = ? WHERE email = ?",

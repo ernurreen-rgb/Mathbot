@@ -66,7 +66,8 @@ export default function ProfilePage() {
       });
       
       if (!res.ok) {
-        throw new Error(`Сервер қатесі: ${res.status}`);
+        const errorData = await res.json().catch(() => ({ detail: `Сервер қатесі: ${res.status}` }));
+        throw new Error(errorData.detail || `Сервер қатесі: ${res.status}`);
       }
       
       const data = await res.json();

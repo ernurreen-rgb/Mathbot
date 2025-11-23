@@ -132,9 +132,12 @@ async def get_web_user_stats_endpoint(email: str):
 @app.post("/api/user/web/nickname")
 async def update_nickname(data: NicknameUpdate):
     """Update web user nickname"""
-    await db.update_web_user_nickname(data.email, data.nickname)
-    stats = await db.get_web_user_stats(data.email)
-    return stats
+    try:
+        await db.update_web_user_nickname(data.email, data.nickname)
+        stats = await db.get_web_user_stats(data.email)
+        return stats
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 def validate_and_get_file_path(filename: str, base_dir: Path) -> Path:
     """
