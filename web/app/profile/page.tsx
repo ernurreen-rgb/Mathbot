@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [nicknameInput, setNicknameInput] = useState("");
   const [nicknameSaving, setNicknameSaving] = useState(false);
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -51,6 +52,7 @@ export default function ProfilePage() {
     if (!session?.user?.email) return;
     
     setNicknameSaving(true);
+    setNicknameError(null);
     try {
       const res = await fetch(`${apiUrl}/api/user/web/nickname`, {
         method: 'POST',
@@ -71,7 +73,7 @@ export default function ProfilePage() {
       setStats(data);
       setIsEditingNickname(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Никнеймді сақтау қатесі");
+      setNicknameError(err instanceof Error ? err.message : "Никнеймді сақтау қатесі");
     } finally {
       setNicknameSaving(false);
     }
@@ -243,6 +245,7 @@ export default function ProfilePage() {
                           onClick={() => {
                             setIsEditingNickname(false);
                             setNicknameInput(stats?.nickname || "");
+                            setNicknameError(null);
                           }}
                           disabled={nicknameSaving}
                           className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 text-white font-semibold py-2 px-4 rounded-lg transition"
@@ -250,6 +253,11 @@ export default function ProfilePage() {
                           ❌ Болдырмау
                         </button>
                       </div>
+                      {nicknameError && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg text-sm">
+                          ⚠️ {nicknameError}
+                        </div>
+                      )}
                     </div>
                   )}
                   {!stats?.nickname && !isEditingNickname && (
