@@ -89,7 +89,7 @@ async def check_answer(submission: AnswerSubmission):
 @app.get("/images/{filename}")
 async def serve_image(filename: str):
     """Serve task images"""
-    file_path = Path("images") / filename
+    file_path = IMAGES_DIR / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(file_path)
@@ -97,7 +97,7 @@ async def serve_image(filename: str):
 @app.get("/solutions/{filename}")
 async def serve_solution(filename: str):
     """Serve solution images"""
-    file_path = Path("solutions") / filename
+    file_path = SOLUTIONS_DIR / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Solution not found")
     return FileResponse(file_path)
@@ -106,10 +106,11 @@ async def serve_solution(filename: str):
 TOKEN = "8291254406:AAEsjXgHrTo5uv8_37dDyAgitx2ze1LNlx8"
 ADMIN_IDS = {5423071866}
 
-# Директории
-IMAGES_DIR = Path("images")
+# Директории - use absolute paths based on script location
+BASE_DIR = Path(__file__).parent.absolute()
+IMAGES_DIR = BASE_DIR / "images"
 IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-SOLUTIONS_DIR = Path("solutions")
+SOLUTIONS_DIR = BASE_DIR / "solutions"
 SOLUTIONS_DIR.mkdir(parents=True, exist_ok=True)
 
 bot = Bot(token=TOKEN)
