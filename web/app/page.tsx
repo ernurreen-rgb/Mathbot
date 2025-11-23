@@ -16,7 +16,7 @@ export default function Home() {
         </p>
 
         <p className="text-lg md:text-xl text-gray-600 mb-12 leading-relaxed">
-          Күнде жаңа есептер • Нағыз олимпиадалық деңгей • Рейтинг • Шешімдер • Ұпай жинау
+          Күнде жаңа есептер • Нағыз олимпиадалық \ • Рейтинг • Шешімдер • Ұпай жинау
         </p>
 
         {/* Telegram Login кнопкасы */}
