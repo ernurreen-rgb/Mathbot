@@ -40,12 +40,19 @@ export default function TasksPage() {
     try {
       const res = await fetch(`${apiUrl}/api/task/random`);
       if (!res.ok) {
-        throw new Error("Есептер табылмады");
+        if (res.status === 404) {
+          throw new Error("Есептер табылмады. Әзірше есептер қосылмаған.");
+        }
+        throw new Error(`Сервер қатесі: ${res.status}`);
       }
       const data = await res.json();
       setTask(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Қате болды");
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError(`API серверіне қосылу мүмкін емес.\n\nBot серверін іске қосыңыз:\ncd bot && python main.py\n\nСервер: ${apiUrl}`);
+      } else {
+        setError(err instanceof Error ? err.message : "Қате болды");
+      }
     } finally {
       setLoading(false);
     }
@@ -99,16 +106,24 @@ export default function TasksPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-        <div className="text-center max-w-md p-8 bg-white rounded-2xl shadow-xl">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Қате</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={fetchRandomTask}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
-          >
-            Қайталап көру
-          </button>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 px-4">
+        <div className="text-center max-w-2xl p-8 bg-white rounded-2xl shadow-xl">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">⚠️ Қате</h2>
+          <pre className="text-left text-gray-700 mb-6 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm">{error}</pre>
+          <div className="space-y-3">
+            <button
+              onClick={fetchRandomTask}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+            >
+              🔄 Қайталап көру
+            </button>
+            <a
+              href="/"
+              className="block text-blue-600 hover:text-blue-800 font-semibold underline"
+            >
+              ← Басты бетке қайту
+            </a>
+          </div>
         </div>
       </div>
     );
