@@ -1,9 +1,15 @@
 "use client";
+
+declare global {
+  interface Window {
+    TelegramLogin: () => void;
+    onTelegramAuth: (user: any) => void;
+  }
+}
 import { useEffect } from "react";
 
 export default function TelegramLoginButton() {
   useEffect(() => {
-    // @ts-ignore
     window.TelegramLogin = function() {
       const script = document.createElement("script");
       script.src = "https://telegram.org/js/telegram-widget.js?22";
@@ -15,7 +21,6 @@ export default function TelegramLoginButton() {
       document.getElementById("telegram-login")?.appendChild(script);
     };
 
-    // @ts-ignore
     window.onTelegramAuth = (user: any) => {
       fetch("/login/telegram/callback", {
         method: "POST",

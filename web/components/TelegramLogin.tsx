@@ -10,8 +10,8 @@ export default function TelegramLogin() {
     // Бұл функция Widget арқылы кіру сәтті аяқталғанда іске қосылады.
     // @ts-ignore
     window.onTelegramAuth = async (user: any) => {
-      // 2. Пайдаланушы деректерін /api/auth/telegram API маршрутына жіберу
-      const res = await fetch("/api/auth/telegram", {
+      // 2. Пайдаланушы деректерін /login/telegram API маршрутына жіберу
+      const res = await fetch("/login/telegram", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(user),

@@ -1,3 +1,4 @@
+
 import asyncio
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command, StateFilter, BaseFilter
@@ -16,6 +17,33 @@ import aiofiles
 import os
 import csv
 import database as db
+
+# === FastAPI HTTP API ===
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/api/task/random")
+async def get_random_task():
+    task = await db.get_random_unsolved_task(0)  # user_id=0 — для публичного API
+    if not task:
+        raise HTTPException(status_code=404, detail="No tasks found")
+    # Только нужные поля
+    return {
+        "id": task["id"],
+        "image_path": task["image_path"],
+        "answer_type": task.get("answer_type", "quiz"),
+        "solution_image_path": task.get("solution_image_path"),
+    }
 
 # ========== НАСТРОЙКИ ==========
 TOKEN = "8291254406:AAEsjXgHrTo5uv8_37dDyAgitx2ze1LNlx8"
@@ -466,13 +494,27 @@ async def edit_data(message: Message, state: FSMContext):
 
 
 # ========== START ==========
+
+# === Одновременный запуск aiogram и FastAPI ===
 async def main():
     await db.init_db()
     dp.message.middleware(RegisterUserMiddleware())
     dp.callback_query.middleware(RegisterUserMiddleware())
-    print("Bot started...")
-    await dp.start_polling(bot)
+    print("Bot and API started...")
 
+    # Запускать FastAPI через uvicorn в отдельной задаче
+    api_task = asyncio.create_task(
+        uvicorn.run(
+            "main:app",
+            host="0.0.0.0",
+            port=8000,
+            log_level="info",
+            reload=False,
+        )
+    )
+    # Запускать aiogram polling
+    await dp.start_polling(bot)
+    await api_task
 
 if __name__ == "__main__":
     try:

@@ -5,10 +5,19 @@ import { useState } from "react";
 export default function TaskCard() {
   const [task, setTask] = useState<any>(null);
 
+
+  // URL FastAPI backend (production)
+  const API_URL = "https://mathbot-nu.vercel.app/api/task/random";
+
   const getTask = async () => {
-    const res = await fetch("/api/task/random");
-    const data = await res.json();
-    setTask(data);
+    try {
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error("Не удалось получить задачу");
+      const data = await res.json();
+      setTask(data);
+    } catch (e) {
+      alert("Ошибка при получении задачи: " + (e as Error).message);
+    }
   };
 
   return (
@@ -19,7 +28,15 @@ export default function TaskCard() {
 
       {task && (
         <div className="mt-8">
-          <img src={`/images/task_${task.id}.jpg`} alt="Есеп" className="rounded-lg shadow-md" />
+          <img
+            src={
+              task.image_path.startsWith("http")
+                ? task.image_path
+                : `https://mathbot-nu.vercel.app/${task.image_path.replace(/^\\|^\//, "")}`
+            }
+            alt="Есеп"
+            className="rounded-lg shadow-md"
+          />
           {/* Жауап беру формасы */}
         </div>
       )}
