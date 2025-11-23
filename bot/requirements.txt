@@ -1,13 +1,13 @@
 # Telegram Bot Framework
-aiogram>=3.22.0
+aiogram~=3.22.0
 
 # Database
-aiosqlite>=0.21.0
+aiosqlite~=0.21.0
 
 # Web Framework and Server
-fastapi>=0.121.3
-uvicorn>=0.38.0
+fastapi~=0.121.3
+uvicorn~=0.38.0
 
 # Utilities
-aiofiles>=24.1.0
-pydantic>=2.11.10
+aiofiles~=24.1.0
+pydantic~=2.11.10
