@@ -5,9 +5,8 @@ import { useState } from "react";
 export default function TaskCard() {
   const [task, setTask] = useState<any>(null);
 
-
   // URL FastAPI backend (production)
-  const API_URL = "https://mathbot-git-copilot-fix-telegram-login-issue-yera1.vercel.app/";
+  const API_URL = "https://mathbot-nu.vercel.app";
 
   const getTask = async () => {
     try {
