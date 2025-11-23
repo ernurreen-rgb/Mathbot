@@ -91,14 +91,13 @@ def validate_and_get_file_path(filename: str, base_dir: Path) -> Path:
     Validate filename and return safe file path within base directory.
     Raises HTTPException if validation fails.
     """
-    # Validate filename to prevent path traversal
-    if '/' in filename or '\\' in filename or filename.startswith('..'):
+    # Validate filename to prevent path traversal and empty filenames
+    if not filename or '/' in filename or '\\' in filename or filename.startswith('..'):
         raise HTTPException(status_code=400, detail="Invalid filename")
     
     file_path = base_dir / filename
-    # Ensure the resolved path is still within base_dir
-    # Use cached resolved base_dir for better performance
-    if not file_path.resolve().is_relative_to(base_dir):
+    # Ensure the resolved path is still within base_dir (using resolve() to prevent symlink attacks)
+    if not file_path.resolve().is_relative_to(base_dir.resolve()):
         raise HTTPException(status_code=400, detail="Invalid file path")
     
     return file_path
