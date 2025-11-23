@@ -336,7 +336,11 @@ async def cmd_rating(message: Message):
     top = await db.get_top_users(10)
     lines = ["🏆 **Үздік қолданушылар:**"]
     for i, r in enumerate(top, 1):
-        name = r["username"] or r["full_name"] or str(r["user_id"])
+        # Handle both Telegram and web users
+        if r["source"] == "web":
+            name = r["name"] or r["email"]
+        else:
+            name = r["username"] or r["full_name"] or str(r["user_id"])
         lines.append(f"{i}. {name} — {r['points']}")
     await message.answer("\n".join(lines), parse_mode="Markdown")
 
