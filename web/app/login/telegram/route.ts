@@ -65,17 +65,16 @@ export async function POST(req: NextRequest) {
   // Next.js-те Cookie-ді орнату үшін NextResponse қолданған дұрыс
   const response = NextResponse.json({ status: "success", user_id: body.id }, { status: 200 });
   
-  response.cookies.set("tg_user_id", body.id.toString(), {
+    response.cookies.set("user_id", body.id.toString(), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // Тек HTTPS-те жұмыс істейді (Vercel)
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: maxAge,
   });
 
-  // Екінші cookie-ді сақтау (мысалы, тек көрсету үшін)
-  response.cookies.set("tg_username", body.first_name || "User", {
-    httpOnly: false, // Қажет болса, клиенттік JS-тен оқуға рұқсат
+    response.cookies.set("user_name", body.first_name || "User", {
+    httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
