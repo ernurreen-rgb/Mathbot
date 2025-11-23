@@ -67,9 +67,9 @@ export default function TelegramLogin() {
         console.log('[Telegram Widget] Cleaning up');
         // @ts-ignore
         delete window.onTelegramAuth;
-        // Remove the script if it exists
-        if (container && script.parentNode === container) {
-          container.removeChild(script);
+        // Remove the script if it still exists in the DOM
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
         }
     };
     
