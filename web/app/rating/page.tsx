@@ -4,11 +4,17 @@
 import { useState, useEffect } from "react";
 
 interface User {
-  user_id: number;
-  username: string | null;
-  full_name: string | null;
+  // Telegram users
+  user_id?: number;
+  username?: string | null;
+  full_name?: string | null;
+  // Web users
+  email?: string;
+  name?: string | null;
+  // Common fields
   points: number;
   solved_count: number;
+  source: 'telegram' | 'web';
 }
 
 export default function RatingPage() {
