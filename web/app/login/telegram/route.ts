@@ -21,12 +21,14 @@ if (!BOT_TOKEN) {
  */
 function verifyTelegramAuth(data: Record<string, string>, token: string): boolean {
   const hash = data.hash;
-  delete data.hash;
+  
+  // Create a copy without the hash to avoid mutating the original object
+  const { hash: _, ...dataWithoutHash } = data;
   
   // КІРІС ДЕРЕКТЕРІН СҰРЫПТАУ ЖӘНЕ ЖОЛҒА АЙНАЛДЫРУ
-  const checkString = Object.keys(data)
+  const checkString = Object.keys(dataWithoutHash)
     .sort()
-    .map((k) => `${k}=${data[k]}`)
+    .map((k) => `${k}=${dataWithoutHash[k]}`)
     .join("\n");
   
   // ҚҰПИЯ КІЛТТІ ГЕНЕРАЦИЯЛАУ (SHA256)
