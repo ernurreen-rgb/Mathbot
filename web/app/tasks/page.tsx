@@ -31,7 +31,8 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetchRandomTask();
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchRandomTask = async () => {
     setLoading(true);

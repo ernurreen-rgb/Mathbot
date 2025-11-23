@@ -61,7 +61,7 @@ export default function Home() {
         {/* Төменгі статистика */}
         <div className="mt-20 text-gray-500 text-sm md:text-base">
           <p>
-            Қазір {new Date().toLocaleDateString("kk-KZ", {
+            Қазір {new Date().toLocaleDateString(undefined, {
               day: "numeric",
               month: "long",
               year: "numeric"

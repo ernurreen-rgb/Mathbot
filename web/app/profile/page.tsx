@@ -187,7 +187,7 @@ export default function ProfilePage() {
             {/* Registration date */}
             {stats?.registration_date && (
               <div className="text-center text-gray-500 text-sm pt-6 border-t border-gray-200">
-                Тіркелген күні: {new Date(stats.registration_date).toLocaleDateString("kk-KZ", {
+                Тіркелген күні: {new Date(stats.registration_date).toLocaleDateString(undefined, {
                   day: "numeric",
                   month: "long",
                   year: "numeric"
