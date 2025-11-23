@@ -10,20 +10,23 @@ export default function TelegramLogin() {
     // Бұл функция Widget арқылы кіру сәтті аяқталғанда іске қосылады.
     // @ts-ignore
     window.onTelegramAuth = async (user: any) => {
-      // 2. Пайдаланушы деректерін /login/telegram API маршрутына жіберу
-      const res = await fetch("/login/telegram", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user),
-      });
-      
-      if (res.ok) {
-        // 3. Егер API сәтті жауап берсе (cookie орнатылса), бетті жаңарту
-        location.reload();
-      } else {
-        // 4. Қате болса (мысалы, 401 Unauthorized - Хэш тексеру қатесі)
-        console.error("Authentication failed on server:", res.status);
-        alert("Кіру сәтсіз аяқталды. Серверлік қатені тексеріңіз.");
+      console.log('Telegram user:', user);
+      try {
+        const res = await fetch("/login/telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user),
+        });
+        const text = await res.text();
+        console.log('Server response:', res.status, text);
+        if (res.ok) {
+          location.reload();
+        } else {
+          alert("Кіру сәтсіз аяқталды. Серверлік қатені тексеріңіз. Код: " + res.status + "\n" + text);
+        }
+      } catch (e) {
+        console.error('Fetch error:', e);
+        alert("Fetch error: " + (e as Error).message);
       }
     };
 
