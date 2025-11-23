@@ -157,28 +157,21 @@ async def get_top_users(limit: int = 10) -> List[Dict[str, Any]]:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         
-        # Telegram қолданушылары
-        telegram_users = []
+        # UNION query to combine both user types and sort in database
         async with conn.execute(
-            "SELECT user_id, username, full_name, points, solved_count, 'telegram' as source FROM users "
-            "ORDER BY points DESC, solved_count DESC"
+            """
+            SELECT user_id, username, full_name, NULL as email, NULL as name, 
+                   points, solved_count, 'telegram' as source
+            FROM users
+            UNION ALL
+            SELECT NULL as user_id, NULL as username, NULL as full_name, 
+                   email, name, points, solved_count, 'web' as source
+            FROM web_users
+            ORDER BY points DESC, solved_count DESC
+            LIMIT ?
+            """, (limit,)
         ) as cur:
-            telegram_users = [dict(row) for row in await cur.fetchall()]
-        
-        # Веб қолданушылары
-        web_users = []
-        async with conn.execute(
-            "SELECT email, name, points, solved_count, 'web' as source FROM web_users "
-            "ORDER BY points DESC, solved_count DESC"
-        ) as cur:
-            web_users = [dict(row) for row in await cur.fetchall()]
-        
-        # Барлық қолданушыларды біріктіру және сұрыптау
-        all_users = telegram_users + web_users
-        all_users.sort(key=lambda x: (x['points'], x['solved_count']), reverse=True)
-        
-        # Limit қолдану
-        return all_users[:limit]
+            return [dict(row) for row in await cur.fetchall()]
 
 
 # ==================== ЕСЕПТЕР ====================
