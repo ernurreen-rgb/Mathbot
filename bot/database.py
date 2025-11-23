@@ -29,7 +29,7 @@ async def init_db() -> None:
             CREATE TABLE IF NOT EXISTS web_users (
                 email TEXT PRIMARY KEY,
                 name TEXT,
-                google_id TEXT UNIQUE,
+                google_id TEXT,
                 points INTEGER DEFAULT 0,
                 solved_count INTEGER DEFAULT 0,
                 registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP

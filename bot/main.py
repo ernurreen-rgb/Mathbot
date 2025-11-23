@@ -92,8 +92,8 @@ async def check_answer(submission: AnswerSubmission):
     
     # Update progress for web users
     if submission.email:
-        # Ensure web user exists
-        await db.ensure_web_user(submission.email, submission.email.split('@')[0], submission.email)
+        # Ensure web user exists (use email as fallback google_id if not provided separately)
+        await db.ensure_web_user(submission.email, submission.email.split('@')[0], "")
         
         if is_correct:
             # Check if already solved
@@ -120,8 +120,8 @@ async def get_web_user_stats_endpoint(email: str):
     """Get web user statistics"""
     stats = await db.get_web_user_stats(email)
     if not stats:
-        # Create user if not exists
-        await db.ensure_web_user(email, email.split('@')[0], email)
+        # Create user if not exists (use empty string as google_id placeholder)
+        await db.ensure_web_user(email, email.split('@')[0], "")
         stats = await db.get_web_user_stats(email)
     return stats
 

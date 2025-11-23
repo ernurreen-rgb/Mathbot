@@ -2,7 +2,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface UserStats {
   email?: string;
@@ -20,13 +20,7 @@ export default function ProfilePage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  useEffect(() => {
-    if (session?.user?.email) {
-      fetchUserStats();
-    }
-  }, [session]);
-
-  const fetchUserStats = async () => {
+  const fetchUserStats = useCallback(async () => {
     if (!session?.user?.email) return;
     
     setLoading(true);
@@ -47,7 +41,13 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.email, apiUrl]);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetchUserStats();
+    }
+  }, [session?.user?.email, fetchUserStats]);
 
   if (!session) {
     return (
