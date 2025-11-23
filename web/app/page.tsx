@@ -19,6 +19,28 @@ export default function Home() {
           Күнде жаңа есептер • Нағыз олимпиадалық есептер • Рейтинг • Шешімдер • Ұпай жинау
         </p>
 
+        {/* Navigation buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+          <a
+            href="/tasks"
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg transform hover:scale-105"
+          >
+            🧩 Есептер
+          </a>
+          <a
+            href="/rating"
+            className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg transform hover:scale-105"
+          >
+            🏆 Рейтинг
+          </a>
+          <a
+            href="/profile"
+            className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg transform hover:scale-105"
+          >
+            👤 Профиль
+          </a>
+        </div>
+
         {/* Telegram Login кнопкасы - temporarily hidden */}
         {/* <div className="flex flex-col items-center gap-8">
           <div className="bg-white p-6 rounded-3xl shadow-2xl border border-blue-100">
