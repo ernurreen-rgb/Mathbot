@@ -496,25 +496,21 @@ async def edit_data(message: Message, state: FSMContext):
 # ========== START ==========
 
 # === Одновременный запуск aiogram и FastAPI ===
+
+async def start_fastapi():
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
+
 async def main():
     await db.init_db()
     dp.message.middleware(RegisterUserMiddleware())
     dp.callback_query.middleware(RegisterUserMiddleware())
     print("Bot and API started...")
 
-    # Запускать FastAPI через uvicorn в отдельной задаче
-    api_task = asyncio.create_task(
-        uvicorn.run(
-            "main:app",
-            host="0.0.0.0",
-            port=8000,
-            log_level="info",
-            reload=False,
-        )
-    )
-    # Запускать aiogram polling
+    fastapi_task = asyncio.create_task(start_fastapi())
     await dp.start_polling(bot)
-    await api_task
+    await fastapi_task
 
 if __name__ == "__main__":
     try:
