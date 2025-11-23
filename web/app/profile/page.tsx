@@ -11,12 +11,12 @@ export default function ProfilePage() {
           </h1>
 
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">📱</div>
+            <div className="text-6xl mb-4">🔐</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-3">
-              Профиль Telegram ботында
+              Кіру керек
             </h2>
             <p className="text-gray-600 mb-6">
-              Статистиканы көру үшін Telegram ботына кіріп <span className="font-mono bg-gray-100 px-2 py-1 rounded">/profile</span> командасын енгізіңіз
+              Профильді көру үшін Telegram ботына кіріңіз
             </p>
             <a
               href="https://t.me/yeramathbot"

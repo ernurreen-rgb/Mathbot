@@ -21,6 +21,9 @@ import database as db
 # === FastAPI HTTP API ===
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 import uvicorn
 
 app = FastAPI()
@@ -31,6 +34,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class AnswerSubmission(BaseModel):
+    task_id: int
+    answer: str
+    user_id: int = 0  # Default to anonymous user
 
 @app.get("/api/task/random")
 async def get_random_task():
@@ -43,7 +51,56 @@ async def get_random_task():
         "image_path": task["image_path"],
         "answer_type": task.get("answer_type", "quiz"),
         "solution_image_path": task.get("solution_image_path"),
+        "correct_option": task.get("correct_option"),  # For checking answers
     }
+
+@app.get("/api/rating")
+async def get_rating(limit: int = 10):
+    """Get top users leaderboard"""
+    users = await db.get_top_users(limit)
+    return {"users": users}
+
+@app.get("/api/user/{user_id}")
+async def get_user_stats(user_id: int):
+    """Get user statistics"""
+    stats = await db.get_user_stats(user_id)
+    if not stats:
+        raise HTTPException(status_code=404, detail="User not found")
+    return stats
+
+@app.post("/api/task/check")
+async def check_answer(submission: AnswerSubmission):
+    """Check if answer is correct"""
+    task = await db.get_task(submission.task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    user_answer = submission.answer.strip().lower().replace(',', '.')
+    correct_answer = task["correct_option"].strip().lower().replace(',', '.')
+    
+    is_correct = user_answer == correct_answer
+    
+    return {
+        "correct": is_correct,
+        "correct_answer": task["correct_option"] if not is_correct else None,
+        "solution_image_path": task.get("solution_image_path")
+    }
+
+@app.get("/images/{filename}")
+async def serve_image(filename: str):
+    """Serve task images"""
+    file_path = Path("images") / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
+
+@app.get("/solutions/{filename}")
+async def serve_solution(filename: str):
+    """Serve solution images"""
+    file_path = Path("solutions") / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Solution not found")
+    return FileResponse(file_path)
 
 # ========== НАСТРОЙКИ ==========
 TOKEN = "8291254406:AAEsjXgHrTo5uv8_37dDyAgitx2ze1LNlx8"
