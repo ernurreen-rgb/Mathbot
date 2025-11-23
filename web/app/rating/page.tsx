@@ -120,11 +120,8 @@ export default function RatingPage() {
                     subtitle = `@${user.username}`;
                   }
                 } else {
-                  displayName = user.nickname || user.name || user.email || 'Web User';
-                  // Show email only if nickname is set (to indicate it's not showing email as name)
-                  if (user.nickname) {
-                    subtitle = user.email || '';
-                  }
+                  displayName = user.nickname || user.name || 'Web User';
+                  // Don't show email to protect user privacy
                 }
                 
                 return (
