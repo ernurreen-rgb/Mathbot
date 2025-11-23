@@ -40,7 +40,7 @@ export default function TelegramLogin() {
     script.setAttribute("data-radius", "12");
     
     // 🛑 МІНЕ МӘСЕЛЕНІҢ ШЕШІМІ: data-auth-url-ді data-onauth-қа ауыстыру!
-    script.setAttribute("data-onauth", "onTelegramAuth(user)"); 
+    script.setAttribute("data-onauth", "onTelegramAuth"); 
     
     // data-auth-url атрибуты ЖОЙЫЛДЫ
     

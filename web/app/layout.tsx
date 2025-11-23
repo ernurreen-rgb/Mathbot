@@ -1,10 +1,7 @@
 // web/app/layout.tsx
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { cookies } from "next/headers";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "EsepBot – Қазақстандық математика платформасы",
@@ -35,7 +32,7 @@ export default async function RootLayout({
 
   return (
     <html lang="kk">
-      <body className={`${inter.className} min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50`}>
+      <body className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 font-sans">
         {/* Кірген қолданушыны көрсету */}
         {user && (
           <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-6 text-center font-bold shadow-lg">
