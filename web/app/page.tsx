@@ -1,5 +1,5 @@
 // web/app/page.tsx
-import TelegramLogin from "@/components/TelegramLogin";
+// import TelegramLogin from "@/components/TelegramLogin";
 
 export default function Home() {
   return (
@@ -19,8 +19,8 @@ export default function Home() {
           Күнде жаңа есептер • Нағыз олимпиадалық есептер • Рейтинг • Шешімдер • Ұпай жинау
         </p>
 
-        {/* Telegram Login кнопкасы */}
-        <div className="flex flex-col items-center gap-8">
+        {/* Telegram Login кнопкасы - temporarily hidden */}
+        {/* <div className="flex flex-col items-center gap-8">
           <div className="bg-white p-6 rounded-3xl shadow-2xl border border-blue-100">
             <TelegramLogin />
           </div>
@@ -28,7 +28,7 @@ export default function Home() {
           <button className="text-blue-600 hover:text-blue-800 font-semibold text-lg underline decoration-2 underline-offset-4 transition">
             Қалай жұмыс істейді?
           </button>
-        </div>
+        </div> */}
 
         {/* Төменгі статистика */}
         <div className="mt-20 text-gray-500 text-sm md:text-base">
