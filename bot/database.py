@@ -3,6 +3,7 @@ import aiosqlite
 from typing import Dict, Any, List, Optional
 
 DB_NAME = "database.db"
+MAX_NICKNAME_LENGTH = 30
 
 
 async def init_db() -> None:
@@ -158,8 +159,8 @@ async def update_web_user_nickname(email: str, nickname: str) -> None:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         # Validate and clean nickname
         cleaned_nickname = nickname.strip() if nickname else None
-        if cleaned_nickname and len(cleaned_nickname) > 30:
-            raise ValueError("Никнейм 30 таңбадан аспауы керек")
+        if cleaned_nickname and len(cleaned_nickname) > MAX_NICKNAME_LENGTH:
+            raise ValueError(f"Никнейм {MAX_NICKNAME_LENGTH} таңбадан аспауы керек")
         
         await conn.execute(
             "UPDATE web_users SET nickname = ? WHERE email = ?",

@@ -232,7 +232,7 @@ export default function ProfilePage() {
                         onChange={(e) => setNicknameInput(e.target.value)}
                         placeholder="Никнеймді енгізіңіз"
                         className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500"
-                        maxLength={30}
+                        maxLength={30} // Must match MAX_NICKNAME_LENGTH in backend database.py
                       />
                       <div className="flex gap-2">
                         <button
