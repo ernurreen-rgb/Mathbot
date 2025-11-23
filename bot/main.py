@@ -46,6 +46,10 @@ class WebUserInfo(BaseModel):
     name: str
     google_id: str
 
+class NicknameUpdate(BaseModel):
+    email: str
+    nickname: str
+
 @app.get("/api/task/random")
 async def get_random_task(email: str = ""):
     """Get random unsolved task for user"""
@@ -123,6 +127,13 @@ async def get_web_user_stats_endpoint(email: str):
         # Create user if not exists (use email as name and empty google_id)
         await db.ensure_web_user(email, email, "")
         stats = await db.get_web_user_stats(email)
+    return stats
+
+@app.post("/api/user/web/nickname")
+async def update_nickname(data: NicknameUpdate):
+    """Update web user nickname"""
+    await db.update_web_user_nickname(data.email, data.nickname)
+    stats = await db.get_web_user_stats(data.email)
     return stats
 
 def validate_and_get_file_path(filename: str, base_dir: Path) -> Path:
@@ -338,7 +349,7 @@ async def cmd_rating(message: Message):
     for i, r in enumerate(top, 1):
         # Handle both Telegram and web users
         if r["source"] == "web":
-            name = r["name"] or r["email"] or "Web User"
+            name = r["nickname"] or r["name"] or r["email"] or "Web User"
         else:
             name = r["username"] or r["full_name"] or str(r["user_id"])
         lines.append(f"{i}. {name} — {r['points']}")

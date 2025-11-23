@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 interface UserStats {
   email?: string;
   name?: string;
+  nickname?: string | null;
   points: number;
   solved_count: number;
   registration_date?: string;
@@ -17,6 +18,9 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState("");
+  const [nicknameSaving, setNicknameSaving] = useState(false);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -43,11 +47,47 @@ export default function ProfilePage() {
     }
   }, [session?.user?.email, apiUrl]);
 
+  const updateNickname = async () => {
+    if (!session?.user?.email) return;
+    
+    setNicknameSaving(true);
+    try {
+      const res = await fetch(`${apiUrl}/api/user/web/nickname`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: session.user.email,
+          nickname: nicknameInput.trim()
+        })
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Сервер қатесі: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      setStats(data);
+      setIsEditingNickname(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Никнеймді сақтау қатесі");
+    } finally {
+      setNicknameSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (session?.user?.email) {
       fetchUserStats();
     }
   }, [session?.user?.email, fetchUserStats]);
+
+  useEffect(() => {
+    if (stats?.nickname) {
+      setNicknameInput(stats.nickname);
+    }
+  }, [stats?.nickname]);
 
   if (!session) {
     return (
@@ -153,11 +193,71 @@ export default function ProfilePage() {
                   className="w-20 h-20 rounded-full border-4 border-blue-200"
                 />
               )}
-              <div>
+              <div className="flex-1">
                 <h2 className="text-3xl font-bold text-gray-800">
                   {session.user.name || stats?.name || "Қолданушы"}
                 </h2>
                 <p className="text-gray-600 text-lg">{session.user.email}</p>
+              </div>
+            </div>
+
+            {/* Nickname Section */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">✨</span>
+                    <h3 className="text-lg font-bold text-gray-800">Никнейм (рейтингте көрінеді)</h3>
+                  </div>
+                  {!isEditingNickname ? (
+                    <div className="flex items-center gap-3">
+                      <p className="text-xl font-semibold text-purple-700">
+                        {stats?.nickname || "Орнатылмаған"}
+                      </p>
+                      <button
+                        onClick={() => setIsEditingNickname(true)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm"
+                      >
+                        {stats?.nickname ? "✏️ Өзгерту" : "➕ Қосу"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={nicknameInput}
+                        onChange={(e) => setNicknameInput(e.target.value)}
+                        placeholder="Никнеймді енгізіңіз"
+                        className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500"
+                        maxLength={30}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={updateNickname}
+                          disabled={nicknameSaving || !nicknameInput.trim()}
+                          className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition"
+                        >
+                          {nicknameSaving ? "Сақталуда..." : "✅ Сақтау"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingNickname(false);
+                            setNicknameInput(stats?.nickname || "");
+                          }}
+                          disabled={nicknameSaving}
+                          className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 text-white font-semibold py-2 px-4 rounded-lg transition"
+                        >
+                          ❌ Болдырмау
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!stats?.nickname && !isEditingNickname && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      💡 Никнейм орнатсаңыз, рейтингте email-дің орнына никнейм көрсетіледі
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -76,7 +76,8 @@ async def init_db() -> None:
             "ALTER TABLE tasks ADD COLUMN solution_image_path TEXT",
             "ALTER TABLE tasks ADD COLUMN answer_type TEXT DEFAULT 'quiz'",
             "ALTER TABLE users ADD COLUMN full_name TEXT",
-            "ALTER TABLE tasks ADD COLUMN created_by INTEGER"
+            "ALTER TABLE tasks ADD COLUMN created_by INTEGER",
+            "ALTER TABLE web_users ADD COLUMN nickname TEXT"
         ]
         for sql in migrations:
             try:
@@ -152,6 +153,16 @@ async def get_web_user_stats(email: str) -> Optional[Dict[str, Any]]:
             return dict(row) if row else None
 
 
+async def update_web_user_nickname(email: str, nickname: str) -> None:
+    """Веб қолданушының никнеймін жаңарту"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        await conn.execute(
+            "UPDATE web_users SET nickname = ? WHERE email = ?",
+            (nickname.strip() if nickname else None, email)
+        )
+        await conn.commit()
+
+
 async def get_top_users(limit: int = 10) -> List[Dict[str, Any]]:
     """Telegram және веб қолданушыларының рейтингі"""
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
@@ -160,12 +171,12 @@ async def get_top_users(limit: int = 10) -> List[Dict[str, Any]]:
         # UNION query to combine both user types and sort in database
         async with conn.execute(
             """
-            SELECT user_id, username, full_name, NULL as email, NULL as name, 
+            SELECT user_id, username, full_name, NULL as email, NULL as name, NULL as nickname,
                    points, solved_count, 'telegram' as source
             FROM users
             UNION ALL
             SELECT NULL as user_id, NULL as username, NULL as full_name, 
-                   email, name, points, solved_count, 'web' as source
+                   email, name, nickname, points, solved_count, 'web' as source
             FROM web_users
             ORDER BY points DESC, solved_count DESC
             LIMIT ?

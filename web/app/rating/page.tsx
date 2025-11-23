@@ -11,6 +11,7 @@ interface User {
   // Web users
   email?: string;
   name?: string | null;
+  nickname?: string | null;
   // Common fields
   points: number;
   solved_count: number;
@@ -112,10 +113,18 @@ export default function RatingPage() {
                 const isTopThree = position <= 3;
                 // Handle both Telegram and Web users
                 let displayName = '';
+                let subtitle = '';
                 if (user.source === 'telegram') {
                   displayName = user.username || user.full_name || `User ${user.user_id}`;
+                  if (user.username && user.full_name) {
+                    subtitle = `@${user.username}`;
+                  }
                 } else {
-                  displayName = user.name || user.email;
+                  displayName = user.nickname || user.name || user.email || 'Web User';
+                  // Show email only if nickname is set (to indicate it's not showing email as name)
+                  if (user.nickname) {
+                    subtitle = user.email || '';
+                  }
                 }
                 
                 return (
@@ -135,11 +144,8 @@ export default function RatingPage() {
                         <p className={`font-bold ${isTopThree ? 'text-lg' : 'text-base'} text-gray-800`}>
                           {displayName}
                         </p>
-                        {user.source === 'telegram' && user.username && user.full_name && (
-                          <p className="text-sm text-gray-500">@{user.username}</p>
-                        )}
-                        {user.source === 'web' && (
-                          <p className="text-sm text-gray-500">{user.email}</p>
+                        {subtitle && (
+                          <p className="text-sm text-gray-500">{subtitle}</p>
                         )}
                       </div>
                     </div>
