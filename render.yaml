@@ -1,0 +1,40 @@
+services:
+  # Bot/API Service (Python FastAPI + Telegram Bot)
+  - type: web
+    name: mathbot-api
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r bot/requirements.txt
+    startCommand: cd bot && python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 8000
+    # Add your Telegram bot token as an environment variable in Render dashboard
+    # - key: BOT_TOKEN
+    #   sync: false
+
+  # Web Frontend Service (Next.js)
+  - type: web
+    name: mathbot-web
+    env: node
+    region: frankfurt
+    plan: free
+    rootDir: web
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: NEXT_PUBLIC_API_URL
+        value: https://mathbot-api.onrender.com
+      - key: NEXTAUTH_URL
+        sync: false  # Set this in Render dashboard to your web URL
+      - key: NEXTAUTH_SECRET
+        sync: false  # Generate with: openssl rand -base64 32
+      - key: GOOGLE_CLIENT_ID
+        sync: false  # Optional: for Google OAuth
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false  # Optional: for Google OAuth

@@ -172,7 +172,7 @@ async def serve_solution(filename: str):
     return FileResponse(file_path)
 
 # ========== НАСТРОЙКИ ==========
-TOKEN = "8291254406:AAEsjXgHrTo5uv8_37dDyAgitx2ze1LNlx8"
+TOKEN = os.getenv("BOT_TOKEN", "8291254406:AAEsjXgHrTo5uv8_37dDyAgitx2ze1LNlx8")
 ADMIN_IDS = {5423071866}
 
 # Директории - use absolute paths based on script location
@@ -629,7 +629,8 @@ async def edit_data(message: Message, state: FSMContext):
 # === Одновременный запуск aiogram и FastAPI ===
 
 async def start_fastapi():
-    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    port = int(os.getenv("PORT", 8000))
+    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
     server = uvicorn.Server(config)
     await server.serve()
 
