@@ -172,7 +172,9 @@ async def serve_solution(filename: str):
     return FileResponse(file_path)
 
 # ========== НАСТРОЙКИ ==========
-TOKEN = os.getenv("BOT_TOKEN", "8291254406:AAEsjXgHrTo5uv8_37dDyAgitx2ze1LNlx8")
+TOKEN = os.getenv("BOT_TOKEN")
+if not TOKEN:
+    raise ValueError("BOT_TOKEN environment variable is required")
 ADMIN_IDS = {5423071866}
 
 # Директории - use absolute paths based on script location

@@ -67,15 +67,14 @@ This project consists of two services:
      - **Environment**: Python 3
      - **Region**: Frankfurt (or closest to you)
      - **Branch**: main
-     - **Root Directory**: (leave empty)
-     - **Build Command**: `pip install -r bot/requirements.txt`
-     - **Start Command**: `cd bot && python main.py`
+     - **Root Directory**: bot
+     - **Build Command**: `pip install -r requirements.txt`
+     - **Start Command**: `python main.py`
      - **Plan**: Free
 
 2. **Add Environment Variables**:
    ```
    BOT_TOKEN=your_telegram_bot_token_here
-   PORT=8000
    PYTHON_VERSION=3.11.0
    ```
 
