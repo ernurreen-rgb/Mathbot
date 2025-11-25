@@ -90,6 +90,11 @@ async def init_db() -> None:
             except aiosqlite.OperationalError:
                 pass  # колонка бар деген
 
+        # Міграція для ескі "platinum" лигасын "sapphire"-ке өзгерту
+        # (10 деңгейлі жүйеде platinum жоқ, оның орнына sapphire бар)
+        await conn.execute("UPDATE users SET league = 'sapphire' WHERE league = 'platinum'")
+        await conn.execute("UPDATE web_users SET league = 'sapphire' WHERE league = 'platinum'")
+
         await conn.commit()
 
 
@@ -338,19 +343,24 @@ async def get_bot_statistics() -> Dict[str, int]:
 
 # ==================== ЛИГА ЖҮЙЕСІ ====================
 
-# Лига деңгейлері (Duolingo стилінде)
-LEAGUES = ["bronze", "silver", "gold", "platinum", "diamond"]
+# Лига деңгейлері (Duolingo стилінде - 10 деңгей)
+LEAGUES = ["bronze", "silver", "gold", "sapphire", "ruby", "emerald", "amethyst", "pearl", "obsidian", "diamond"]
 LEAGUE_NAMES = {
-    "bronze": "🥉 Қола",
+    "bronze": "🪨 Қола",
     "silver": "🥈 Күміс", 
     "gold": "🥇 Алтын",
-    "platinum": "💎 Платина",
+    "sapphire": "💎 Сапфир",
+    "ruby": "💚 Рубин",
+    "emerald": "💜 Изумруд",
+    "amethyst": "🔮 Аметист",
+    "pearl": "🍀 Інжу",
+    "obsidian": "🔥 Обсидиан",
     "diamond": "💠 Алмас"
 }
 
 # Лигаға көтерілу/түсу үшін қажетті орын
-PROMOTION_THRESHOLD = 3  # Топ 3 көтеріледі
-DEMOTION_THRESHOLD = 3   # Соңғы 3 түседі
+PROMOTION_THRESHOLD = 7  # Топ 7 көтеріледі (Duolingo: 7-10)
+DEMOTION_THRESHOLD = 5   # Соңғы 5 түседі (Duolingo: 5-10)
 
 
 def get_league_index(league: str) -> int:

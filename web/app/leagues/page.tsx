@@ -136,15 +136,20 @@ export default function LeaguesPage() {
       bronze: "from-orange-100 to-amber-100 border-orange-300",
       silver: "from-gray-100 to-slate-100 border-gray-300",
       gold: "from-yellow-100 to-amber-100 border-yellow-400",
-      platinum: "from-cyan-100 to-blue-100 border-cyan-400",
+      sapphire: "from-blue-100 to-cyan-100 border-blue-400",
+      ruby: "from-red-100 to-pink-100 border-red-400",
+      emerald: "from-green-100 to-emerald-100 border-green-400",
+      amethyst: "from-purple-100 to-violet-100 border-purple-400",
+      pearl: "from-slate-100 to-zinc-100 border-slate-300",
+      obsidian: "from-gray-800 to-slate-900 border-gray-700",
       diamond: "from-purple-100 to-pink-100 border-purple-400"
     };
     return colors[league] || colors.bronze;
   };
 
   const getPromotionZone = (position: number, total: number) => {
-    const PROMOTION_THRESHOLD = 3;
-    const DEMOTION_THRESHOLD = 3;
+    const PROMOTION_THRESHOLD = 7;  // Top 7 users get promoted (Duolingo: 7-10)
+    const DEMOTION_THRESHOLD = 5;   // Bottom 5 users get demoted (Duolingo: 5-10)
     const MIN_USERS_FOR_DEMOTION = PROMOTION_THRESHOLD + DEMOTION_THRESHOLD + 1;
     
     if (position <= PROMOTION_THRESHOLD) return "promotion";
@@ -174,7 +179,7 @@ export default function LeaguesPage() {
             </div>
             <div className="mt-4 pt-4 border-t border-gray-300">
               <p className="text-sm text-gray-600">
-                💡 Топ 3 жоғары лигаға көтеріледі • Соңғы 3 төмен лигаға түседі
+                💡 Топ 7 жоғары лигаға көтеріледі • Соңғы 5 төмен лигаға түседі
               </p>
             </div>
           </div>
@@ -277,7 +282,7 @@ export default function LeaguesPage() {
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm text-gray-700">
               <strong>Ескерту:</strong> Апталық рейтинг жексенбі сайын нөлге тасталады. 
-              Топ 3 қолданушы жоғары лигаға көтеріледі, соңғы 3 төмен лигаға түседі.
+              Топ 7 қолданушы жоғары лигаға көтеріледі, соңғы 5 төмен лигаға түседі.
             </p>
           </div>
         </div>
