@@ -51,10 +51,16 @@ class NicknameUpdate(BaseModel):
     nickname: str
 
 def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> Optional[str]:
-    """Convert an absolute file path to a relative URL path."""
+    """Convert an absolute file path to a relative URL path.
+    
+    Returns path without leading slash (e.g., 'images/task_1.jpg') so frontend
+    can safely concatenate with apiUrl using a single slash.
+    """
     if not absolute_path:
         return None
-    return f"{url_prefix}/{Path(absolute_path).name}"
+    # Remove leading slash from url_prefix to avoid double slashes in frontend
+    prefix = url_prefix.lstrip('/')
+    return f"{prefix}/{Path(absolute_path).name}"
 
 @app.get("/api/task/random")
 async def get_random_task(email: str = ""):
