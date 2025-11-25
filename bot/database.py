@@ -63,16 +63,7 @@ async def init_db() -> None:
             );
         """)
 
-        # Индекстер – жылдамдық үшін өте маңызды!
-        await conn.executescript("""
-            CREATE INDEX IF NOT EXISTS idx_us_user ON user_solutions(user_id);
-            CREATE INDEX IF NOT EXISTS idx_us_task ON user_solutions(task_id);
-            CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
-            CREATE INDEX IF NOT EXISTS idx_wus_email ON web_user_solutions(email);
-            CREATE INDEX IF NOT EXISTS idx_wus_task ON web_user_solutions(task_id);
-        """)
-
-        # Миграциялар (ескі базаларға)
+        # Миграциялар (ескі базаларға) - MUST BE BEFORE INDEXES
         migrations = [
             "ALTER TABLE tasks ADD COLUMN solution_image_path TEXT",
             "ALTER TABLE tasks ADD COLUMN answer_type TEXT DEFAULT 'quiz'",
@@ -89,6 +80,21 @@ async def init_db() -> None:
                 await conn.execute(sql)
             except aiosqlite.OperationalError:
                 pass  # колонка бар деген
+
+        # Индекстер – жылдамдық үшін өте маңызды!
+        await conn.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_us_user ON user_solutions(user_id);
+            CREATE INDEX IF NOT EXISTS idx_us_task ON user_solutions(task_id);
+            CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
+            CREATE INDEX IF NOT EXISTS idx_wus_email ON web_user_solutions(email);
+            CREATE INDEX IF NOT EXISTS idx_wus_task ON web_user_solutions(task_id);
+            CREATE INDEX IF NOT EXISTS idx_users_league ON users(league);
+            CREATE INDEX IF NOT EXISTS idx_users_weekly_points ON users(weekly_points DESC);
+            CREATE INDEX IF NOT EXISTS idx_web_users_league ON web_users(league);
+            CREATE INDEX IF NOT EXISTS idx_web_users_weekly_points ON web_users(weekly_points DESC);
+            CREATE INDEX IF NOT EXISTS idx_users_points ON users(points DESC);
+            CREATE INDEX IF NOT EXISTS idx_web_users_points ON web_users(points DESC);
+        """)
 
         await conn.commit()
 
@@ -426,12 +432,24 @@ async def get_user_league_info(user_id: int) -> Optional[Dict[str, Any]]:
             
             result = dict(row)
             
-            # Лигадағы орынды табу
-            leaderboard = await get_league_leaderboard(result['league'], limit=100)
-            for i, user in enumerate(leaderboard):
-                if user.get('user_id') == user_id:
-                    result['rank'] = i + 1
-                    break
+            # Лигадағы орынды табу (SQL COUNT арқылы - өте жылдам)
+            # Count users in same league with higher weekly_points, or same points but higher total points
+            async with conn.execute(
+                """
+                SELECT COUNT(*) + 1 as rank FROM (
+                    SELECT weekly_points, points FROM users 
+                    WHERE league = ? AND user_id != ?
+                    UNION ALL
+                    SELECT weekly_points, points FROM web_users 
+                    WHERE league = ? AND nickname IS NOT NULL AND nickname != ''
+                )
+                WHERE weekly_points > ? OR (weekly_points = ? AND points > ?)
+                """,
+                (result['league'], user_id, result['league'], 
+                 result['weekly_points'], result['weekly_points'], result['points'])
+            ) as cur:
+                rank_row = await cur.fetchone()
+                result['rank'] = rank_row[0] if rank_row else 1
             
             return result
 
@@ -450,12 +468,24 @@ async def get_web_user_league_info(email: str) -> Optional[Dict[str, Any]]:
             
             result = dict(row)
             
-            # Лигадағы орынды табу
-            leaderboard = await get_league_leaderboard(result['league'], limit=100)
-            for i, user in enumerate(leaderboard):
-                if user.get('email') == email:
-                    result['rank'] = i + 1
-                    break
+            # Лигадағы орынды табу (SQL COUNT арқылы - өте жылдам)
+            # Count users in same league with higher weekly_points, or same points but higher total points
+            async with conn.execute(
+                """
+                SELECT COUNT(*) + 1 as rank FROM (
+                    SELECT weekly_points, points FROM users 
+                    WHERE league = ?
+                    UNION ALL
+                    SELECT weekly_points, points FROM web_users 
+                    WHERE league = ? AND email != ? AND nickname IS NOT NULL AND nickname != ''
+                )
+                WHERE weekly_points > ? OR (weekly_points = ? AND points > ?)
+                """,
+                (result['league'], result['league'], email,
+                 result['weekly_points'], result['weekly_points'], result['points'])
+            ) as cur:
+                rank_row = await cur.fetchone()
+                result['rank'] = rank_row[0] if rank_row else 1
             
             return result
 
