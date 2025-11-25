@@ -143,8 +143,12 @@ export default function LeaguesPage() {
   };
 
   const getPromotionZone = (position: number, total: number) => {
-    if (position <= 3) return "promotion"; // Top 3 get promoted
-    if (position > total - 3 && total > 6) return "demotion"; // Bottom 3 get demoted
+    const PROMOTION_THRESHOLD = 3;
+    const DEMOTION_THRESHOLD = 3;
+    const MIN_USERS_FOR_DEMOTION = PROMOTION_THRESHOLD + DEMOTION_THRESHOLD + 1;
+    
+    if (position <= PROMOTION_THRESHOLD) return "promotion";
+    if (position > total - DEMOTION_THRESHOLD && total >= MIN_USERS_FOR_DEMOTION) return "demotion";
     return "safe";
   };
 

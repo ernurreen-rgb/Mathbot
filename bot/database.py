@@ -486,7 +486,9 @@ async def reset_weekly_points() -> None:
                         )
             
             # Соңғы 3 - түседі (бірінші лигадан басқа)
-            if i > 0 and len(leaderboard) > 6:
+            # Demotion only if there are enough users (more than promotion + demotion zones)
+            min_users_for_demotion = PROMOTION_THRESHOLD + DEMOTION_THRESHOLD + 1
+            if i > 0 and len(leaderboard) >= min_users_for_demotion:
                 prev_league = LEAGUES[i - 1]
                 for j in range(max(0, len(leaderboard) - DEMOTION_THRESHOLD), len(leaderboard)):
                     user = leaderboard[j]
