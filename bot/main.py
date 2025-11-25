@@ -649,6 +649,17 @@ async def cmd_export(message: Message):
         pass
 
 
+@dp.message(Command("resetweek"), IsAdminFilter())
+async def cmd_reset_week(message: Message):
+    """Апталық ұпайларды нөлге тастау (админ әмірі)"""
+    await message.answer("⏳ Апталық ұпайларды нөлге тастау басталды...")
+    try:
+        await db.reset_weekly_points()
+        await message.answer("✅ Апталық ұпайлар нөлге тасталды! Лигалар жаңартылды.")
+    except Exception as e:
+        await message.answer(f"❌ Қате: {e}")
+
+
 @dp.message(Command("alltasks"), IsAdminFilter())
 async def cmd_alltasks(message: Message):
     rows = await db.list_tasks(200)
@@ -732,6 +743,32 @@ async def start_fastapi():
     server = uvicorn.Server(config)
     await server.serve()
 
+
+async def weekly_reset_task():
+    """Апталық ұпайларды нөлге тастау (жексенбі сайын)"""
+    import datetime
+    while True:
+        now = datetime.datetime.now()
+        # Келесі жексенбі 00:00
+        days_until_sunday = (6 - now.weekday()) % 7
+        if days_until_sunday == 0:
+            days_until_sunday = 7
+        next_sunday = now + datetime.timedelta(days=days_until_sunday)
+        next_sunday = next_sunday.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        wait_seconds = (next_sunday - now).total_seconds()
+        print(f"Next weekly reset: {next_sunday} (in {wait_seconds/3600:.1f} hours)")
+        
+        await asyncio.sleep(wait_seconds)
+        
+        print("Resetting weekly points and updating leagues...")
+        try:
+            await db.reset_weekly_points()
+            print("Weekly reset completed successfully!")
+        except Exception as e:
+            print(f"Error during weekly reset: {e}")
+
+
 async def main():
     await db.init_db()
     dp.message.middleware(RegisterUserMiddleware())
@@ -739,8 +776,11 @@ async def main():
     print("Bot and API started...")
 
     fastapi_task = asyncio.create_task(start_fastapi())
+    weekly_task = asyncio.create_task(weekly_reset_task())
+    
     await dp.start_polling(bot)
     await fastapi_task
+    await weekly_task
 
 if __name__ == "__main__":
     try:
