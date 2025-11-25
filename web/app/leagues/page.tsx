@@ -31,6 +31,7 @@ interface LeagueInfo {
   weekly_points: number;
   points: number;
   rank?: number;
+  league_group_id?: number;
 }
 
 export default function LeaguesPage() {
@@ -89,7 +90,13 @@ export default function LeaguesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${apiUrl}/api/league/${league}?limit=30`);
+      // Егер қолданушының өз лигасы болса, оның тобын көрсету
+      let url = `${apiUrl}/api/league/${league}?limit=30`;
+      if (session?.user?.email && userLeagueInfo?.league === league && userLeagueInfo?.league_group_id) {
+        url += `&group_id=${userLeagueInfo.league_group_id}`;
+      }
+      
+      const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`Сервер қатесі: ${res.status}`);
       }
@@ -171,6 +178,16 @@ export default function LeaguesPage() {
                 <p className="text-gray-600">
                   Орын: <span className="font-bold text-xl">#{userLeagueInfo.rank || "?"}</span>
                 </p>
+                {userLeagueInfo.league_group_id && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    🎯 Топ #{userLeagueInfo.league_group_id}
+                  </p>
+                )}
+                {!userLeagueInfo.league_group_id && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    ⚠️ Топқа қосылу үшін есеп шешіңіз!
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">Апталық ұпай</p>
@@ -180,6 +197,9 @@ export default function LeaguesPage() {
             <div className="mt-4 pt-4 border-t border-gray-300">
               <p className="text-sm text-gray-600">
                 💡 Топ 7 жоғары лигаға көтеріледі • Соңғы 5 төмен лигаға түседі
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                📊 Сіз өз тобыңыздағы {leagueUsers.length || 30}-50 қолданушымен жарысасыз
               </p>
             </div>
           </div>

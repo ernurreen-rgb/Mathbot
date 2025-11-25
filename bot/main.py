@@ -152,20 +152,25 @@ async def update_nickname(data: NicknameUpdate):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/league/{league}")
-async def get_league_leaderboard(league: str, limit: int = 30):
-    """Get league leaderboard (weekly points)"""
+async def get_league_leaderboard_endpoint(league: str, limit: int = 30, group_id: int = None):
+    """Get league leaderboard (weekly points)
+    
+    If group_id is provided, returns only users in that group.
+    Otherwise returns all users in the league (for backward compatibility).
+    """
     if league not in db.LEAGUES:
         raise HTTPException(status_code=400, detail="Invalid league")
-    users = await db.get_league_leaderboard(league, limit)
+    users = await db.get_league_leaderboard(league, limit, group_id=group_id)
     return {
         "league": league,
         "league_name": db.LEAGUE_NAMES.get(league, league),
+        "group_id": group_id,
         "users": users
     }
 
 @app.get("/api/user/web/{email}/league")
 async def get_web_user_league(email: str):
-    """Get web user league info"""
+    """Get web user league info including group"""
     league_info = await db.get_web_user_league_info(email)
     if not league_info:
         raise HTTPException(status_code=404, detail="User not found")
@@ -412,7 +417,7 @@ async def cmd_profile(message: Message):
 
 @dp.message(Command("league"))
 async def cmd_league(message: Message):
-    """Лигадағы рейтингті көрсету"""
+    """Лигадағы рейтингті көрсету (өз тобыңызда)"""
     league_info = await db.get_user_league_info(message.from_user.id)
     if not league_info:
         await message.answer("Профиль табылмады.")
@@ -420,24 +425,37 @@ async def cmd_league(message: Message):
     
     league = league_info['league']
     league_name = db.LEAGUE_NAMES.get(league, league)
+    group_id = league_info.get('league_group_id')
     
-    leaderboard = await db.get_league_leaderboard(league, limit=10)
+    # Өз тобының рейтингін алу
+    if group_id:
+        leaderboard = await db.get_league_leaderboard(league, limit=30, group_id=group_id)
+        group_info = f" (Топ #{group_id})"
+    else:
+        leaderboard = await db.get_league_leaderboard(league, limit=30)
+        group_info = ""
     
-    lines = [f"🏆 **{league_name} лигасы**\n"]
-    for i, r in enumerate(leaderboard, 1):
-        emoji = "👑" if i == 1 else f"{i}."
-        if r["source"] == "web":
-            name = r["nickname"] or r["name"] or "Web User"
-        else:
-            name = r["username"] or r["full_name"] or str(r["user_id"])
-        
-        # Highlight current user
-        if r.get("user_id") == message.from_user.id:
-            name = f"**{name} (Сіз)**"
-        
-        lines.append(f"{emoji} {name} — ⚡{r['weekly_points']}")
+    lines = [f"🏆 **{league_name} лигасы{group_info}**\n"]
+    
+    if not leaderboard:
+        lines.append("Әзірше қолданушылар жоқ.")
+    else:
+        for i, r in enumerate(leaderboard, 1):
+            emoji = "👑" if i == 1 else f"{i}."
+            if r["source"] == "web":
+                name = r["nickname"] or r["name"] or "Web User"
+            else:
+                name = r["username"] or r["full_name"] or str(r["user_id"])
+            
+            # Highlight current user
+            if r.get("user_id") == message.from_user.id:
+                name = f"**{name} (Сіз)**"
+            
+            lines.append(f"{emoji} {name} — ⚡{r['weekly_points']}")
     
     lines.append(f"\n💡 Топ {db.PROMOTION_THRESHOLD} көтеріледі, соңғы {db.DEMOTION_THRESHOLD} түседі")
+    if not group_id:
+        lines.append("⚠️ Топқа қосылу үшін алғаш есеп шешіңіз!")
     
     await message.answer("\n".join(lines), parse_mode="Markdown")
 

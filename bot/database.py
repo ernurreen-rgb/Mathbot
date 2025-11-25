@@ -4,6 +4,8 @@ from typing import Dict, Any, List, Optional
 
 DB_NAME = "database.db"
 MAX_NICKNAME_LENGTH = 30
+GROUP_MIN_SIZE = 30  # Minimum users in a group before creating new one
+GROUP_MAX_SIZE = 50  # Maximum users in a group
 
 
 async def init_db() -> None:
@@ -34,6 +36,14 @@ async def init_db() -> None:
                 points INTEGER DEFAULT 0,
                 solved_count INTEGER DEFAULT 0,
                 registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS league_groups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                league TEXT NOT NULL,
+                week_start DATE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(league, week_start, id)
             );
 
             CREATE TABLE IF NOT EXISTS tasks (
@@ -70,6 +80,9 @@ async def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
             CREATE INDEX IF NOT EXISTS idx_wus_email ON web_user_solutions(email);
             CREATE INDEX IF NOT EXISTS idx_wus_task ON web_user_solutions(task_id);
+            CREATE INDEX IF NOT EXISTS idx_league_groups ON league_groups(league, week_start);
+            CREATE INDEX IF NOT EXISTS idx_users_group ON users(league_group_id);
+            CREATE INDEX IF NOT EXISTS idx_web_users_group ON web_users(league_group_id);
         """)
 
         # Миграциялар (ескі базаларға)
@@ -82,7 +95,9 @@ async def init_db() -> None:
             "ALTER TABLE users ADD COLUMN league TEXT DEFAULT 'bronze'",
             "ALTER TABLE users ADD COLUMN weekly_points INTEGER DEFAULT 0",
             "ALTER TABLE web_users ADD COLUMN league TEXT DEFAULT 'bronze'",
-            "ALTER TABLE web_users ADD COLUMN weekly_points INTEGER DEFAULT 0"
+            "ALTER TABLE web_users ADD COLUMN weekly_points INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN league_group_id INTEGER",
+            "ALTER TABLE web_users ADD COLUMN league_group_id INTEGER"
         ]
         for sql in migrations:
             try:
@@ -371,6 +386,115 @@ def get_league_index(league: str) -> int:
         return 0  # bronze по умолчанию
 
 
+def get_current_week_start() -> str:
+    """Ағымдағы аптаның басталу күнін алу (дүйсенбі)"""
+    import datetime
+    today = datetime.date.today()
+    # 0 = Monday, 6 = Sunday
+    days_since_monday = today.weekday()
+    monday = today - datetime.timedelta(days=days_since_monday)
+    return monday.isoformat()
+
+
+async def get_or_create_league_group(league: str, user_source: str = 'telegram') -> int:
+    """Пайдаланушы үшін лига тобын алу немесе жасау (Duolingo стилінде)
+    
+    Әр аптада жаңа топтар жасалады. Қолданушы алғаш рет апта ішінде 
+    ұпай жинағанда, оны бос топқа қосады немесе жаңа топ жасайды.
+    """
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        week_start = get_current_week_start()
+        
+        # Ағымдағы аптадағы бос топты табу (GROUP_MAX_SIZE-тан кем қолданушылары бар)
+        async with conn.execute("""
+            SELECT lg.id, COUNT(CASE WHEN u.user_id IS NOT NULL THEN 1 END) + 
+                   COUNT(CASE WHEN wu.email IS NOT NULL THEN 1 END) as user_count
+            FROM league_groups lg
+            LEFT JOIN users u ON u.league_group_id = lg.id
+            LEFT JOIN web_users wu ON wu.league_group_id = lg.id
+            WHERE lg.league = ? AND lg.week_start = ?
+            GROUP BY lg.id
+            HAVING user_count < ?
+            ORDER BY lg.id ASC
+            LIMIT 1
+        """, (league, week_start, GROUP_MAX_SIZE)) as cur:
+            row = await cur.fetchone()
+            if row:
+                return row['id']
+        
+        # Бос топ жоқ - жаңа топ жасау
+        cursor = await conn.execute(
+            "INSERT INTO league_groups (league, week_start) VALUES (?, ?)",
+            (league, week_start)
+        )
+        await conn.commit()
+        return cursor.lastrowid
+
+
+async def assign_user_to_group(user_id: int = None, email: str = None) -> None:
+    """Қолданушыны топқа тағайындау (алғаш ұпай алғанда)"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        
+        if user_id:
+            # Telegram қолданушы
+            async with conn.execute(
+                "SELECT league, league_group_id, weekly_points FROM users WHERE user_id = ?",
+                (user_id,)
+            ) as cur:
+                user = await cur.fetchone()
+                if not user:
+                    return
+                
+                # Егер бұл аптада топ тағайындалмаған болса және ұпай алса
+                week_start = get_current_week_start()
+                if user['league_group_id']:
+                    # Тексеру: топ ағымдағы апта үшін ме?
+                    async with conn.execute(
+                        "SELECT week_start FROM league_groups WHERE id = ?",
+                        (user['league_group_id'],)
+                    ) as cur2:
+                        group = await cur2.fetchone()
+                        if group and group['week_start'] == week_start:
+                            return  # Қолданушы қазірдің өзінде дұрыс топта
+                
+                # Жаңа топқа қосу
+                group_id = await get_or_create_league_group(user['league'], 'telegram')
+                await conn.execute(
+                    "UPDATE users SET league_group_id = ? WHERE user_id = ?",
+                    (group_id, user_id)
+                )
+        
+        elif email:
+            # Веб қолданушы
+            async with conn.execute(
+                "SELECT league, league_group_id, weekly_points FROM web_users WHERE email = ?",
+                (email,)
+            ) as cur:
+                user = await cur.fetchone()
+                if not user:
+                    return
+                
+                week_start = get_current_week_start()
+                if user['league_group_id']:
+                    async with conn.execute(
+                        "SELECT week_start FROM league_groups WHERE id = ?",
+                        (user['league_group_id'],)
+                    ) as cur2:
+                        group = await cur2.fetchone()
+                        if group and group['week_start'] == week_start:
+                            return
+                
+                group_id = await get_or_create_league_group(user['league'], 'web')
+                await conn.execute(
+                    "UPDATE web_users SET league_group_id = ? WHERE email = ?",
+                    (group_id, email)
+                )
+        
+        await conn.commit()
+
+
 async def mark_solved_and_add_point(user_id: int, task_id: int) -> None:
     """Telegram қолданушы есепті шешіп ұпай алады (жалпы және апта)"""
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
@@ -378,11 +502,23 @@ async def mark_solved_and_add_point(user_id: int, task_id: int) -> None:
             "INSERT OR REPLACE INTO user_solutions (user_id, task_id, is_correct) VALUES (?, ?, 1)",
             (user_id, task_id)
         )
+        
+        # Алдымен weekly_points-ты тексеру
+        async with conn.execute(
+            "SELECT weekly_points FROM users WHERE user_id = ?", (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+            was_zero = row and row[0] == 0
+        
         await conn.execute(
             "UPDATE users SET points = points + 1, solved_count = solved_count + 1, weekly_points = weekly_points + 1 WHERE user_id = ?",
             (user_id,)
         )
         await conn.commit()
+        
+        # Егер бұл аптадағы алғаш ұпай болса, топқа қосу
+        if was_zero:
+            await assign_user_to_group(user_id=user_id)
 
 
 async def mark_web_solved_and_add_point(email: str, task_id: int) -> None:
@@ -392,34 +528,70 @@ async def mark_web_solved_and_add_point(email: str, task_id: int) -> None:
             "INSERT OR REPLACE INTO web_user_solutions (email, task_id, is_correct) VALUES (?, ?, 1)",
             (email, task_id)
         )
+        
+        # Алдымен weekly_points-ты тексеру
+        async with conn.execute(
+            "SELECT weekly_points FROM web_users WHERE email = ?", (email,)
+        ) as cur:
+            row = await cur.fetchone()
+            was_zero = row and row[0] == 0
+        
         await conn.execute(
             "UPDATE web_users SET points = points + 1, solved_count = solved_count + 1, weekly_points = weekly_points + 1 WHERE email = ?",
             (email,)
         )
         await conn.commit()
+        
+        # Егер бұл аптадағы алғаш ұпай болса, топқа қосу
+        if was_zero:
+            await assign_user_to_group(email=email)
 
 
-async def get_league_leaderboard(league: str, limit: int = 30) -> List[Dict[str, Any]]:
-    """Белгілі бір лиганың рейтингін алу (апталық ұпай бойынша)"""
+async def get_league_leaderboard(league: str, limit: int = 30, group_id: int = None) -> List[Dict[str, Any]]:
+    """Белгілі бір лиганың рейтингін алу (апталық ұпай бойынша)
+    
+    Егер group_id көрсетілсе, тек сол топтағы қолданушылар көрсетіледі.
+    Егер group_id = None болса, барлық топтар біріктіріледі (ескі мінез-құлық).
+    """
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         
-        async with conn.execute(
-            """
-            SELECT user_id, username, full_name, NULL as email, NULL as name, NULL as nickname,
-                   points, solved_count, weekly_points, league, 'telegram' as source
-            FROM users
-            WHERE league = ?
-            UNION ALL
-            SELECT NULL as user_id, NULL as username, NULL as full_name, 
-                   email, name, nickname, points, solved_count, weekly_points, league, 'web' as source
-            FROM web_users
-            WHERE league = ? AND nickname IS NOT NULL AND nickname != ''
-            ORDER BY weekly_points DESC, points DESC
-            LIMIT ?
-            """, (league, league, limit)
-        ) as cur:
-            return [dict(row) for row in await cur.fetchall()]
+        if group_id is not None:
+            # Белгілі топтағы қолданушылар
+            async with conn.execute(
+                """
+                SELECT user_id, username, full_name, NULL as email, NULL as name, NULL as nickname,
+                       points, solved_count, weekly_points, league, league_group_id, 'telegram' as source
+                FROM users
+                WHERE league = ? AND league_group_id = ?
+                UNION ALL
+                SELECT NULL as user_id, NULL as username, NULL as full_name, 
+                       email, name, nickname, points, solved_count, weekly_points, league, league_group_id, 'web' as source
+                FROM web_users
+                WHERE league = ? AND league_group_id = ? AND nickname IS NOT NULL AND nickname != ''
+                ORDER BY weekly_points DESC, points DESC
+                LIMIT ?
+                """, (league, group_id, league, group_id, limit)
+            ) as cur:
+                return [dict(row) for row in await cur.fetchall()]
+        else:
+            # Барлық топтар (ескі API үйлесімділігі үшін)
+            async with conn.execute(
+                """
+                SELECT user_id, username, full_name, NULL as email, NULL as name, NULL as nickname,
+                       points, solved_count, weekly_points, league, league_group_id, 'telegram' as source
+                FROM users
+                WHERE league = ?
+                UNION ALL
+                SELECT NULL as user_id, NULL as username, NULL as full_name, 
+                       email, name, nickname, points, solved_count, weekly_points, league, league_group_id, 'web' as source
+                FROM web_users
+                WHERE league = ? AND nickname IS NOT NULL AND nickname != ''
+                ORDER BY weekly_points DESC, points DESC
+                LIMIT ?
+                """, (league, league, limit)
+            ) as cur:
+                return [dict(row) for row in await cur.fetchall()]
 
 
 async def get_user_league_info(user_id: int) -> Optional[Dict[str, Any]]:
@@ -427,7 +599,7 @@ async def get_user_league_info(user_id: int) -> Optional[Dict[str, Any]]:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         async with conn.execute(
-            "SELECT league, weekly_points, points FROM users WHERE user_id = ?", 
+            "SELECT league, weekly_points, points, league_group_id FROM users WHERE user_id = ?", 
             (user_id,)
         ) as cur:
             row = await cur.fetchone()
@@ -436,8 +608,17 @@ async def get_user_league_info(user_id: int) -> Optional[Dict[str, Any]]:
             
             result = dict(row)
             
-            # Лигадағы орынды табу
-            leaderboard = await get_league_leaderboard(result['league'], limit=100)
+            # Лигадағы орынды табу (тек өз тобында)
+            if result.get('league_group_id'):
+                leaderboard = await get_league_leaderboard(
+                    result['league'], 
+                    limit=100, 
+                    group_id=result['league_group_id']
+                )
+            else:
+                # Топ жоқ болса, барлық лига (ескі мінез-құлық)
+                leaderboard = await get_league_leaderboard(result['league'], limit=100)
+            
             for i, user in enumerate(leaderboard):
                 if user.get('user_id') == user_id:
                     result['rank'] = i + 1
@@ -451,7 +632,7 @@ async def get_web_user_league_info(email: str) -> Optional[Dict[str, Any]]:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         async with conn.execute(
-            "SELECT league, weekly_points, points FROM web_users WHERE email = ?", 
+            "SELECT league, weekly_points, points, league_group_id FROM web_users WHERE email = ?", 
             (email,)
         ) as cur:
             row = await cur.fetchone()
@@ -460,8 +641,17 @@ async def get_web_user_league_info(email: str) -> Optional[Dict[str, Any]]:
             
             result = dict(row)
             
-            # Лигадағы орынды табу
-            leaderboard = await get_league_leaderboard(result['league'], limit=100)
+            # Лигадағы орынды табу (тек өз тобында)
+            if result.get('league_group_id'):
+                leaderboard = await get_league_leaderboard(
+                    result['league'], 
+                    limit=100, 
+                    group_id=result['league_group_id']
+                )
+            else:
+                # Топ жоқ болса, барлық лига
+                leaderboard = await get_league_leaderboard(result['league'], limit=100)
+            
             for i, user in enumerate(leaderboard):
                 if user.get('email') == email:
                     result['rank'] = i + 1
@@ -471,49 +661,59 @@ async def get_web_user_league_info(email: str) -> Optional[Dict[str, Any]]:
 
 
 async def reset_weekly_points() -> None:
-    """Апталық ұпайларды нөлге тастау және лигаларды жаңарту"""
+    """Апталық ұпайларды нөлге тастау және лигаларды жаңарту (топ бойынша)"""
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         
-        # Әр лига үшін көтерілу/түсу
+        # Әр лига үшін топ бойынша көтерілу/түсу
         for i, league in enumerate(LEAGUES):
-            leaderboard = await get_league_leaderboard(league, limit=100)
+            # Ағымдағы аптадағы барлық топтарды алу
+            week_start = get_current_week_start()
+            async with conn.execute(
+                "SELECT id FROM league_groups WHERE league = ? AND week_start = ?",
+                (league, week_start)
+            ) as cur:
+                groups = await cur.fetchall()
             
-            # Топ 3 - көтеріледі (соңғы лигадан басқа)
-            if i < len(LEAGUES) - 1:
-                next_league = LEAGUES[i + 1]
-                for j in range(min(PROMOTION_THRESHOLD, len(leaderboard))):
-                    user = leaderboard[j]
-                    if user['source'] == 'telegram':
-                        await conn.execute(
-                            "UPDATE users SET league = ? WHERE user_id = ?",
-                            (next_league, user['user_id'])
-                        )
-                    else:
-                        await conn.execute(
-                            "UPDATE web_users SET league = ? WHERE email = ?",
-                            (next_league, user['email'])
-                        )
-            
-            # Соңғы 3 - түседі (бірінші лигадан басқа)
-            # Demotion only if there are enough users (more than promotion + demotion zones)
-            min_users_for_demotion = PROMOTION_THRESHOLD + DEMOTION_THRESHOLD + 1
-            if i > 0 and len(leaderboard) >= min_users_for_demotion:
-                prev_league = LEAGUES[i - 1]
-                for j in range(max(0, len(leaderboard) - DEMOTION_THRESHOLD), len(leaderboard)):
-                    user = leaderboard[j]
-                    if user['source'] == 'telegram':
-                        await conn.execute(
-                            "UPDATE users SET league = ? WHERE user_id = ?",
-                            (prev_league, user['user_id'])
-                        )
-                    else:
-                        await conn.execute(
-                            "UPDATE web_users SET league = ? WHERE email = ?",
-                            (prev_league, user['email'])
-                        )
+            # Әр топ үшін жеке көтерілу/түсу
+            for group in groups:
+                group_id = group['id']
+                leaderboard = await get_league_leaderboard(league, limit=100, group_id=group_id)
+                
+                # Топ 7 - көтеріледі (соңғы лигадан басқа)
+                if i < len(LEAGUES) - 1:
+                    next_league = LEAGUES[i + 1]
+                    for j in range(min(PROMOTION_THRESHOLD, len(leaderboard))):
+                        user = leaderboard[j]
+                        if user['source'] == 'telegram':
+                            await conn.execute(
+                                "UPDATE users SET league = ? WHERE user_id = ?",
+                                (next_league, user['user_id'])
+                            )
+                        else:
+                            await conn.execute(
+                                "UPDATE web_users SET league = ? WHERE email = ?",
+                                (next_league, user['email'])
+                            )
+                
+                # Соңғы 5 - түседі (бірінші лигадан басқа)
+                min_users_for_demotion = PROMOTION_THRESHOLD + DEMOTION_THRESHOLD + 1
+                if i > 0 and len(leaderboard) >= min_users_for_demotion:
+                    prev_league = LEAGUES[i - 1]
+                    for j in range(max(0, len(leaderboard) - DEMOTION_THRESHOLD), len(leaderboard)):
+                        user = leaderboard[j]
+                        if user['source'] == 'telegram':
+                            await conn.execute(
+                                "UPDATE users SET league = ? WHERE user_id = ?",
+                                (prev_league, user['user_id'])
+                            )
+                        else:
+                            await conn.execute(
+                                "UPDATE web_users SET league = ? WHERE email = ?",
+                                (prev_league, user['email'])
+                            )
         
-        # Барлық апталық ұпайларды нөлге тастау
-        await conn.execute("UPDATE users SET weekly_points = 0")
-        await conn.execute("UPDATE web_users SET weekly_points = 0")
+        # Барлық апталық ұпайларды нөлге тастау және топтарды тазалау
+        await conn.execute("UPDATE users SET weekly_points = 0, league_group_id = NULL")
+        await conn.execute("UPDATE web_users SET weekly_points = 0, league_group_id = NULL")
         await conn.commit()
