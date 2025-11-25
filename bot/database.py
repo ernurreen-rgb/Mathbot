@@ -96,17 +96,12 @@ async def ensure_user(user_id: int, username: Optional[str], full_name: str) -> 
         username = username if username and username != "None" else None
         full_name = full_name or "Қолданушы"
 
-        row = await (await conn.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))).fetchone()
-        if row:
-            await conn.execute(
-                "UPDATE users SET username = ?, full_name = ? WHERE user_id = ?",
-                (username, full_name, user_id)
-            )
-        else:
-            await conn.execute(
-                "INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)",
-                (user_id, username, full_name)
-            )
+        # Use INSERT ... ON CONFLICT to handle race conditions atomically
+        await conn.execute(
+            """INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET username = excluded.username, full_name = excluded.full_name""",
+            (user_id, username, full_name)
+        )
         await conn.commit()
 
 
@@ -131,17 +126,12 @@ async def ensure_web_user(email: str, name: str, google_id: str) -> None:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         
-        row = await (await conn.execute("SELECT 1 FROM web_users WHERE email = ?", (email,))).fetchone()
-        if row:
-            await conn.execute(
-                "UPDATE web_users SET name = ?, google_id = ? WHERE email = ?",
-                (name, google_id, email)
-            )
-        else:
-            await conn.execute(
-                "INSERT INTO web_users (email, name, google_id) VALUES (?, ?, ?)",
-                (email, name, google_id)
-            )
+        # Use INSERT ... ON CONFLICT to handle race conditions atomically
+        await conn.execute(
+            """INSERT INTO web_users (email, name, google_id) VALUES (?, ?, ?)
+               ON CONFLICT(email) DO UPDATE SET name = excluded.name, google_id = excluded.google_id""",
+            (email, name, google_id)
+        )
         await conn.commit()
 
 

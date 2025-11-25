@@ -59,12 +59,21 @@ async def get_random_task(email: str = ""):
         task = await db.get_random_unsolved_task(0)  # user_id=0 — для публичного API
     if not task:
         raise HTTPException(status_code=404, detail="No tasks found")
-    # Только нужные поля
+    
+    # Convert absolute paths to relative URLs for the API
+    image_path = task["image_path"]
+    if image_path:
+        image_path = f"/images/{Path(image_path).name}"
+    
+    solution_image_path = task.get("solution_image_path")
+    if solution_image_path:
+        solution_image_path = f"/solutions/{Path(solution_image_path).name}"
+    
     return {
         "id": task["id"],
-        "image_path": task["image_path"],
+        "image_path": image_path,
         "answer_type": task.get("answer_type", "quiz"),
-        "solution_image_path": task.get("solution_image_path"),
+        "solution_image_path": solution_image_path,
         "correct_option": task.get("correct_option"),  # For checking answers
     }
 
@@ -106,10 +115,15 @@ async def check_answer(submission: AnswerSubmission):
         else:
             await db.mark_web_attempted(submission.email, submission.task_id)
     
+    # Convert absolute path to relative URL for the API
+    solution_image_path = task.get("solution_image_path")
+    if solution_image_path:
+        solution_image_path = f"/solutions/{Path(solution_image_path).name}"
+    
     return {
         "correct": is_correct,
         "correct_answer": task["correct_option"] if not is_correct else None,
-        "solution_image_path": task.get("solution_image_path")
+        "solution_image_path": solution_image_path
     }
 
 @app.post("/api/user/web")
