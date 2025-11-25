@@ -750,9 +750,7 @@ async def weekly_reset_task():
     while True:
         now = datetime.datetime.now()
         # Келесі жексенбі 00:00
-        days_until_sunday = (6 - now.weekday()) % 7
-        if days_until_sunday == 0:
-            days_until_sunday = 7
+        days_until_sunday = (6 - now.weekday()) % 7 or 7
         next_sunday = now + datetime.timedelta(days=days_until_sunday)
         next_sunday = next_sunday.replace(hour=0, minute=0, second=0, microsecond=0)
         
@@ -777,10 +775,10 @@ async def main():
 
     fastapi_task = asyncio.create_task(start_fastapi())
     weekly_task = asyncio.create_task(weekly_reset_task())
+    polling_task = asyncio.create_task(dp.start_polling(bot))
     
-    await dp.start_polling(bot)
-    await fastapi_task
-    await weekly_task
+    # Run all tasks concurrently
+    await asyncio.gather(fastapi_task, weekly_task, polling_task)
 
 if __name__ == "__main__":
     try:
