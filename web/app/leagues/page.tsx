@@ -143,12 +143,7 @@ export default function LeaguesPage() {
       bronze: "from-orange-100 to-amber-100 border-orange-300",
       silver: "from-gray-100 to-slate-100 border-gray-300",
       gold: "from-yellow-100 to-amber-100 border-yellow-400",
-      sapphire: "from-blue-100 to-cyan-100 border-blue-400",
-      ruby: "from-red-100 to-pink-100 border-red-400",
-      emerald: "from-green-100 to-emerald-100 border-green-400",
-      amethyst: "from-purple-100 to-violet-100 border-purple-400",
-      pearl: "from-slate-100 to-zinc-100 border-slate-300",
-      obsidian: "from-gray-800 to-slate-900 border-gray-700",
+      platinum: "from-cyan-100 to-blue-100 border-cyan-400",
       diamond: "from-purple-100 to-pink-100 border-purple-400"
     };
     return colors[league] || colors.bronze;

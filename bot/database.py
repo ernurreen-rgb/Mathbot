@@ -105,11 +105,6 @@ async def init_db() -> None:
             except aiosqlite.OperationalError:
                 pass  # колонка бар деген
 
-        # Міграція для ескі "platinum" лигасын "sapphire"-ке өзгерту
-        # (10 деңгейлі жүйеде platinum жоқ, оның орнына sapphire бар)
-        await conn.execute("UPDATE users SET league = 'sapphire' WHERE league = 'platinum'")
-        await conn.execute("UPDATE web_users SET league = 'sapphire' WHERE league = 'platinum'")
-
         await conn.commit()
 
 
@@ -358,18 +353,13 @@ async def get_bot_statistics() -> Dict[str, int]:
 
 # ==================== ЛИГА ЖҮЙЕСІ ====================
 
-# Лига деңгейлері (Duolingo стилінде - 10 деңгей)
-LEAGUES = ["bronze", "silver", "gold", "sapphire", "ruby", "emerald", "amethyst", "pearl", "obsidian", "diamond"]
+# Лига деңгейлері (5 деңгей, мини-топтармен)
+LEAGUES = ["bronze", "silver", "gold", "platinum", "diamond"]
 LEAGUE_NAMES = {
     "bronze": "🪨 Қола",
     "silver": "🥈 Күміс", 
     "gold": "🥇 Алтын",
-    "sapphire": "💎 Сапфир",
-    "ruby": "💚 Рубин",
-    "emerald": "💜 Изумруд",
-    "amethyst": "🔮 Аметист",
-    "pearl": "🍀 Інжу",
-    "obsidian": "🔥 Обсидиан",
+    "platinum": "💎 Платина",
     "diamond": "💠 Алмас"
 }
 
