@@ -78,7 +78,11 @@ async def init_db() -> None:
             "ALTER TABLE tasks ADD COLUMN answer_type TEXT DEFAULT 'quiz'",
             "ALTER TABLE users ADD COLUMN full_name TEXT",
             "ALTER TABLE tasks ADD COLUMN created_by INTEGER",
-            "ALTER TABLE web_users ADD COLUMN nickname TEXT"
+            "ALTER TABLE web_users ADD COLUMN nickname TEXT",
+            "ALTER TABLE users ADD COLUMN league TEXT DEFAULT 'bronze'",
+            "ALTER TABLE users ADD COLUMN weekly_points INTEGER DEFAULT 0",
+            "ALTER TABLE web_users ADD COLUMN league TEXT DEFAULT 'bronze'",
+            "ALTER TABLE web_users ADD COLUMN weekly_points INTEGER DEFAULT 0"
         ]
         for sql in migrations:
             try:
@@ -272,19 +276,6 @@ async def update_task_correct_option(task_id: int, new_option: str) -> None:
 
 
 # ==================== ШЕШІМДЕР ====================
-async def mark_solved_and_add_point(user_id: int, task_id: int) -> None:
-    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
-        await conn.execute(
-            "INSERT OR REPLACE INTO user_solutions (user_id, task_id, is_correct) VALUES (?, ?, 1)",
-            (user_id, task_id)
-        )
-        await conn.execute(
-            "UPDATE users SET points = points + 1, solved_count = solved_count + 1 WHERE user_id = ?",
-            (user_id,)
-        )
-        await conn.commit()
-
-
 async def mark_attempted(user_id: int, task_id: int) -> None:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         await conn.execute(
@@ -295,20 +286,6 @@ async def mark_attempted(user_id: int, task_id: int) -> None:
 
 
 # ==================== WEB ШЕШІМДЕР ====================
-async def mark_web_solved_and_add_point(email: str, task_id: int) -> None:
-    """Веб қолданушы есепті дұрыс шешкен кезде"""
-    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
-        await conn.execute(
-            "INSERT OR REPLACE INTO web_user_solutions (email, task_id, is_correct) VALUES (?, ?, 1)",
-            (email, task_id)
-        )
-        await conn.execute(
-            "UPDATE web_users SET points = points + 1, solved_count = solved_count + 1 WHERE email = ?",
-            (email,)
-        )
-        await conn.commit()
-
-
 async def mark_web_attempted(email: str, task_id: int) -> None:
     """Веб қолданушы есепті қате шешкен кезде"""
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
@@ -357,3 +334,174 @@ async def get_bot_statistics() -> Dict[str, int]:
             async with conn.execute(sql) as cur:
                 stats[key] = (await cur.fetchone())[0]
         return stats
+
+
+# ==================== ЛИГА ЖҮЙЕСІ ====================
+
+# Лига деңгейлері (Duolingo стилінде)
+LEAGUES = ["bronze", "silver", "gold", "platinum", "diamond"]
+LEAGUE_NAMES = {
+    "bronze": "🥉 Қола",
+    "silver": "🥈 Күміс", 
+    "gold": "🥇 Алтын",
+    "platinum": "💎 Платина",
+    "diamond": "💠 Алмас"
+}
+
+# Лигаға көтерілу/түсу үшін қажетті орын
+PROMOTION_THRESHOLD = 3  # Топ 3 көтеріледі
+DEMOTION_THRESHOLD = 3   # Соңғы 3 түседі
+
+
+def get_league_index(league: str) -> int:
+    """Лига индексін алу"""
+    try:
+        return LEAGUES.index(league.lower())
+    except ValueError:
+        return 0  # bronze по умолчанию
+
+
+async def mark_solved_and_add_point(user_id: int, task_id: int) -> None:
+    """Telegram қолданушы есепті шешіп ұпай алады (жалпы және апта)"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        await conn.execute(
+            "INSERT OR REPLACE INTO user_solutions (user_id, task_id, is_correct) VALUES (?, ?, 1)",
+            (user_id, task_id)
+        )
+        await conn.execute(
+            "UPDATE users SET points = points + 1, solved_count = solved_count + 1, weekly_points = weekly_points + 1 WHERE user_id = ?",
+            (user_id,)
+        )
+        await conn.commit()
+
+
+async def mark_web_solved_and_add_point(email: str, task_id: int) -> None:
+    """Веб қолданушы есепті дұрыс шешкен кезде (жалпы және апта)"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        await conn.execute(
+            "INSERT OR REPLACE INTO web_user_solutions (email, task_id, is_correct) VALUES (?, ?, 1)",
+            (email, task_id)
+        )
+        await conn.execute(
+            "UPDATE web_users SET points = points + 1, solved_count = solved_count + 1, weekly_points = weekly_points + 1 WHERE email = ?",
+            (email,)
+        )
+        await conn.commit()
+
+
+async def get_league_leaderboard(league: str, limit: int = 30) -> List[Dict[str, Any]]:
+    """Белгілі бір лиганың рейтингін алу (апталық ұпай бойынша)"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        
+        async with conn.execute(
+            """
+            SELECT user_id, username, full_name, NULL as email, NULL as name, NULL as nickname,
+                   points, solved_count, weekly_points, league, 'telegram' as source
+            FROM users
+            WHERE league = ?
+            UNION ALL
+            SELECT NULL as user_id, NULL as username, NULL as full_name, 
+                   email, name, nickname, points, solved_count, weekly_points, league, 'web' as source
+            FROM web_users
+            WHERE league = ? AND nickname IS NOT NULL AND nickname != ''
+            ORDER BY weekly_points DESC, points DESC
+            LIMIT ?
+            """, (league, league, limit)
+        ) as cur:
+            return [dict(row) for row in await cur.fetchall()]
+
+
+async def get_user_league_info(user_id: int) -> Optional[Dict[str, Any]]:
+    """Telegram қолданушының лига ақпаратын алу"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        async with conn.execute(
+            "SELECT league, weekly_points, points FROM users WHERE user_id = ?", 
+            (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+            if not row:
+                return None
+            
+            result = dict(row)
+            
+            # Лигадағы орынды табу
+            leaderboard = await get_league_leaderboard(result['league'], limit=100)
+            for i, user in enumerate(leaderboard):
+                if user.get('user_id') == user_id:
+                    result['rank'] = i + 1
+                    break
+            
+            return result
+
+
+async def get_web_user_league_info(email: str) -> Optional[Dict[str, Any]]:
+    """Веб қолданушының лига ақпаратын алу"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        async with conn.execute(
+            "SELECT league, weekly_points, points FROM web_users WHERE email = ?", 
+            (email,)
+        ) as cur:
+            row = await cur.fetchone()
+            if not row:
+                return None
+            
+            result = dict(row)
+            
+            # Лигадағы орынды табу
+            leaderboard = await get_league_leaderboard(result['league'], limit=100)
+            for i, user in enumerate(leaderboard):
+                if user.get('email') == email:
+                    result['rank'] = i + 1
+                    break
+            
+            return result
+
+
+async def reset_weekly_points() -> None:
+    """Апталық ұпайларды нөлге тастау және лигаларды жаңарту"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        
+        # Әр лига үшін көтерілу/түсу
+        for i, league in enumerate(LEAGUES):
+            leaderboard = await get_league_leaderboard(league, limit=100)
+            
+            # Топ 3 - көтеріледі (соңғы лигадан басқа)
+            if i < len(LEAGUES) - 1:
+                next_league = LEAGUES[i + 1]
+                for j in range(min(PROMOTION_THRESHOLD, len(leaderboard))):
+                    user = leaderboard[j]
+                    if user['source'] == 'telegram':
+                        await conn.execute(
+                            "UPDATE users SET league = ? WHERE user_id = ?",
+                            (next_league, user['user_id'])
+                        )
+                    else:
+                        await conn.execute(
+                            "UPDATE web_users SET league = ? WHERE email = ?",
+                            (next_league, user['email'])
+                        )
+            
+            # Соңғы 3 - түседі (бірінші лигадан басқа)
+            if i > 0 and len(leaderboard) > PROMOTION_THRESHOLD + DEMOTION_THRESHOLD:
+                prev_league = LEAGUES[i - 1]
+                for j in range(max(0, len(leaderboard) - DEMOTION_THRESHOLD), len(leaderboard)):
+                    user = leaderboard[j]
+                    if user['source'] == 'telegram':
+                        await conn.execute(
+                            "UPDATE users SET league = ? WHERE user_id = ?",
+                            (prev_league, user['user_id'])
+                        )
+                    else:
+                        await conn.execute(
+                            "UPDATE web_users SET league = ? WHERE email = ?",
+                            (prev_league, user['email'])
+                        )
+        
+        # Барлық апталық ұпайларды нөлге тастау
+        await conn.execute("UPDATE users SET weekly_points = 0")
+        await conn.execute("UPDATE web_users SET weekly_points = 0")
+        await conn.commit()

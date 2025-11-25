@@ -151,6 +151,36 @@ async def update_nickname(data: NicknameUpdate):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/api/league/{league}")
+async def get_league_leaderboard(league: str, limit: int = 30):
+    """Get league leaderboard (weekly points)"""
+    if league not in db.LEAGUES:
+        raise HTTPException(status_code=400, detail="Invalid league")
+    users = await db.get_league_leaderboard(league, limit)
+    return {
+        "league": league,
+        "league_name": db.LEAGUE_NAMES.get(league, league),
+        "users": users
+    }
+
+@app.get("/api/user/web/{email}/league")
+async def get_web_user_league(email: str):
+    """Get web user league info"""
+    league_info = await db.get_web_user_league_info(email)
+    if not league_info:
+        raise HTTPException(status_code=404, detail="User not found")
+    return league_info
+
+@app.get("/api/leagues")
+async def get_all_leagues():
+    """Get all available leagues"""
+    return {
+        "leagues": [
+            {"id": league, "name": db.LEAGUE_NAMES.get(league, league)}
+            for league in db.LEAGUES
+        ]
+    }
+
 def validate_and_get_file_path(filename: str, base_dir: Path) -> Path:
     """
     Validate filename and return safe file path within base directory.
@@ -252,7 +282,11 @@ class UserStates(StatesGroup):
 # ========== КЛАВИАТУРЫ ==========
 def make_main_reply_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="/task")], [KeyboardButton(text="/profile"), KeyboardButton(text="/rating")]],
+        keyboard=[
+            [KeyboardButton(text="/task")], 
+            [KeyboardButton(text="/profile"), KeyboardButton(text="/league")],
+            [KeyboardButton(text="/rating")]
+        ],
         resize_keyboard=True, one_time_keyboard=False
     )
 
@@ -355,21 +389,71 @@ async def handle_next_task_button(call: CallbackQuery, state: FSMContext):
 async def cmd_profile(message: Message):
     stats = await db.get_user_stats(message.from_user.id)
     if not stats: return
+    
     name = stats.get('username') or stats.get('full_name', 'Пользователь')
-    await message.answer(f"👤 {name}\n💎 Ұпай: {stats['points']}\n🧩 Шешілгені: {stats['solved_count']}")
+    league = stats.get('league', 'bronze')
+    league_name = db.LEAGUE_NAMES.get(league, league)
+    weekly_points = stats.get('weekly_points', 0)
+    
+    # Лигадағы орын
+    league_info = await db.get_user_league_info(message.from_user.id)
+    rank = league_info.get('rank', '?') if league_info else '?'
+    
+    text = (
+        f"👤 **{name}**\n\n"
+        f"🏆 Лига: {league_name}\n"
+        f"📊 Орын: #{rank}\n\n"
+        f"⚡ Апталық ұпай: {weekly_points}\n"
+        f"💎 Жалпы ұпай: {stats['points']}\n"
+        f"🧩 Шешілгені: {stats['solved_count']}"
+    )
+    await message.answer(text, parse_mode="Markdown")
+
+
+@dp.message(Command("league"))
+async def cmd_league(message: Message):
+    """Лигадағы рейтингті көрсету"""
+    league_info = await db.get_user_league_info(message.from_user.id)
+    if not league_info:
+        await message.answer("Профиль табылмады.")
+        return
+    
+    league = league_info['league']
+    league_name = db.LEAGUE_NAMES.get(league, league)
+    
+    leaderboard = await db.get_league_leaderboard(league, limit=10)
+    
+    lines = [f"🏆 **{league_name} лигасы**\n"]
+    for i, r in enumerate(leaderboard, 1):
+        emoji = "👑" if i == 1 else f"{i}."
+        if r["source"] == "web":
+            name = r["nickname"] or r["name"] or "Web User"
+        else:
+            name = r["username"] or r["full_name"] or str(r["user_id"])
+        
+        # Highlight current user
+        if r.get("user_id") == message.from_user.id:
+            name = f"**{name} (Сіз)**"
+        
+        lines.append(f"{emoji} {name} — ⚡{r['weekly_points']}")
+    
+    lines.append(f"\n💡 Топ {db.PROMOTION_THRESHOLD} көтеріледі, соңғы {db.DEMOTION_THRESHOLD} түседі")
+    
+    await message.answer("\n".join(lines), parse_mode="Markdown")
 
 
 @dp.message(Command("rating"))
 async def cmd_rating(message: Message):
     top = await db.get_top_users(10)
-    lines = ["🏆 **Үздік қолданушылар:**"]
+    lines = ["🏆 **Жалпы рейтинг (барлық уақыт):**\n"]
     for i, r in enumerate(top, 1):
         # Handle both Telegram and web users
         if r["source"] == "web":
             name = r["nickname"] or r["name"] or r["email"] or "Web User"
         else:
             name = r["username"] or r["full_name"] or str(r["user_id"])
-        lines.append(f"{i}. {name} — {r['points']}")
+        lines.append(f"{i}. {name} — 💎{r['points']}")
+    lines.append("\n💡 /league - Лигадағы апталық рейтинг")
     await message.answer("\n".join(lines), parse_mode="Markdown")
 
 

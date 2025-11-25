@@ -10,6 +10,8 @@ interface UserStats {
   nickname?: string | null;
   points: number;
   solved_count: number;
+  weekly_points?: number;
+  league?: string;
   registration_date?: string;
 }
 
@@ -271,12 +273,22 @@ export default function ProfilePage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200">
+                <div className="flex items-center gap-4">
+                  <div className="text-5xl">⚡</div>
+                  <div>
+                    <p className="text-gray-600 text-sm font-semibold">Апталық ұпай</p>
+                    <p className="text-4xl font-bold text-purple-600">{stats?.weekly_points || 0}</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-200">
                 <div className="flex items-center gap-4">
                   <div className="text-5xl">💎</div>
                   <div>
-                    <p className="text-gray-600 text-sm font-semibold">Ұпай</p>
+                    <p className="text-gray-600 text-sm font-semibold">Жалпы ұпай</p>
                     <p className="text-4xl font-bold text-blue-600">{stats?.points || 0}</p>
                   </div>
                 </div>
@@ -313,10 +325,16 @@ export default function ProfilePage() {
                 🧩 Есеп шешу
               </a>
               <a
+                href="/leagues"
+                className="flex-1 text-center bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg"
+              >
+                🏆 Лигалар
+              </a>
+              <a
                 href="/rating"
                 className="flex-1 text-center bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg"
               >
-                🏆 Рейтинг
+                📊 Рейтинг
               </a>
             </div>
           </div>

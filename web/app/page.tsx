@@ -21,7 +21,7 @@ export default function Home() {
         </p>
 
         <p className="text-lg md:text-xl text-gray-600 mb-12 leading-relaxed">
-          Күнде жаңа есептер • Нағыз олимпиадалық есептер • Рейтинг • Шешімдер • Ұпай жинау
+          Күнде жаңа есептер • Нағыз олимпиадалық есептер • Лигалық жүйе • Апталық жарыстар • Шешімдер
         </p>
 
         {/* Navigation buttons */}
@@ -33,10 +33,16 @@ export default function Home() {
             🧩 Есептер
           </a>
           <a
+            href="/leagues"
+            className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg transform hover:scale-105"
+          >
+            🏆 Лигалар
+          </a>
+          <a
             href="/rating"
             className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg transform hover:scale-105"
           >
-            🏆 Рейтинг
+            📊 Рейтинг
           </a>
           <a
             href="/profile"
