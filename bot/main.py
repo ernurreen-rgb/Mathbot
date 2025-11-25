@@ -12,7 +12,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.dispatcher.middlewares.base import BaseMiddleware
 from pathlib import Path
-# from typing import Callable, Dict, Any, Awaitable <-- Бұл жол жойылды
+from typing import Optional
 import aiofiles
 import os
 import csv
@@ -50,6 +50,12 @@ class NicknameUpdate(BaseModel):
     email: str
     nickname: str
 
+def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> Optional[str]:
+    """Convert an absolute file path to a relative URL path."""
+    if not absolute_path:
+        return None
+    return f"{url_prefix}/{Path(absolute_path).name}"
+
 @app.get("/api/task/random")
 async def get_random_task(email: str = ""):
     """Get random unsolved task for user"""
@@ -60,20 +66,11 @@ async def get_random_task(email: str = ""):
     if not task:
         raise HTTPException(status_code=404, detail="No tasks found")
     
-    # Convert absolute paths to relative URLs for the API
-    image_path = task["image_path"]
-    if image_path:
-        image_path = f"/images/{Path(image_path).name}"
-    
-    solution_image_path = task.get("solution_image_path")
-    if solution_image_path:
-        solution_image_path = f"/solutions/{Path(solution_image_path).name}"
-    
     return {
         "id": task["id"],
-        "image_path": image_path,
+        "image_path": convert_to_relative_path(task["image_path"], "/images"),
         "answer_type": task.get("answer_type", "quiz"),
-        "solution_image_path": solution_image_path,
+        "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
         "correct_option": task.get("correct_option"),  # For checking answers
     }
 
@@ -115,15 +112,10 @@ async def check_answer(submission: AnswerSubmission):
         else:
             await db.mark_web_attempted(submission.email, submission.task_id)
     
-    # Convert absolute path to relative URL for the API
-    solution_image_path = task.get("solution_image_path")
-    if solution_image_path:
-        solution_image_path = f"/solutions/{Path(solution_image_path).name}"
-    
     return {
         "correct": is_correct,
         "correct_answer": task["correct_option"] if not is_correct else None,
-        "solution_image_path": solution_image_path
+        "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions")
     }
 
 @app.post("/api/user/web")
