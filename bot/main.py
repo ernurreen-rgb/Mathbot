@@ -395,7 +395,7 @@ async def cmd_profile(message: Message):
     stats = await db.get_user_stats(message.from_user.id)
     if not stats: return
     
-    name = stats.get('username') or stats.get('full_name', 'Пользователь')
+    name = stats.get('full_name') or stats.get('username', 'Пользователь')
     league = stats.get('league', 'bronze')
     league_name = db.LEAGUE_NAMES.get(league, league)
     weekly_points = stats.get('weekly_points', 0)
@@ -445,7 +445,7 @@ async def cmd_league(message: Message):
             if r["source"] == "web":
                 name = r["nickname"] or r["name"] or "Web User"
             else:
-                name = r["username"] or r["full_name"] or str(r["user_id"])
+                name = r["full_name"] or r["username"] or str(r["user_id"])
             
             # Highlight current user
             if r.get("user_id") == message.from_user.id:
@@ -469,7 +469,7 @@ async def cmd_rating(message: Message):
         if r["source"] == "web":
             name = r["nickname"] or r["name"] or r["email"] or "Web User"
         else:
-            name = r["username"] or r["full_name"] or str(r["user_id"])
+            name = r["full_name"] or r["username"] or str(r["user_id"])
         lines.append(f"{i}. {name} — 💎{r['points']}")
     lines.append("\n💡 /league - Лигадағы апталық рейтинг")
     await message.answer("\n".join(lines), parse_mode="Markdown")
