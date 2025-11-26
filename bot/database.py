@@ -74,7 +74,7 @@ async def init_db() -> None:
         """)
 
         # Индекстер – жылдамдық үшін өте маңызды!
-        # Note: Indexes on league_group_id are created after migrations below
+        # Note: Indexes on league_group_id columns (idx_users_group, idx_web_users_group) are created after migrations below
         await conn.executescript("""
             CREATE INDEX IF NOT EXISTS idx_us_user ON user_solutions(user_id);
             CREATE INDEX IF NOT EXISTS idx_us_task ON user_solutions(task_id);
@@ -104,7 +104,7 @@ async def init_db() -> None:
             except aiosqlite.OperationalError:
                 pass  # колонка бар деген
 
-        # Create indexes on league_group_id after migrations ensure columns exist
+        # Create indexes on league_group_id after migrations to ensure columns exist
         await conn.executescript("""
             CREATE INDEX IF NOT EXISTS idx_users_group ON users(league_group_id);
             CREATE INDEX IF NOT EXISTS idx_web_users_group ON web_users(league_group_id);
