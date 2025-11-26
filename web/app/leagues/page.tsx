@@ -166,7 +166,7 @@ export default function LeaguesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
         {/* User League Info */}
         {session && userLeagueInfo && (
@@ -207,8 +207,8 @@ export default function LeaguesPage() {
         )}
 
         {/* League Selector */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-8 overflow-hidden">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">
             🏆 Лигалар
           </h1>
           
@@ -231,8 +231,8 @@ export default function LeaguesPage() {
         </div>
 
         {/* League Leaderboard */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6 text-center break-words">
             {leagues.find(l => l.id === currentLeague)?.name || "Лига"} - Апталық рейтинг
           </h2>
 
