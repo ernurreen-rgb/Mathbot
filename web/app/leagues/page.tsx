@@ -218,7 +218,7 @@ export default function LeaguesPage() {
               <button
                 key={league.id}
                 onClick={() => setCurrentLeague(league.id)}
-                className={`px-6 py-3 rounded-lg font-bold transition flex-shrink-0 snap-center md:flex-shrink md:snap-align-none ${
+                className={`px-6 py-3 rounded-lg font-bold transition flex-shrink-0 snap-center md:shrink ${
                   currentLeague === league.id
                     ? "bg-blue-600 text-white shadow-lg scale-105"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
