@@ -69,6 +69,14 @@ export default function LeaguesPage() {
       setLeagues(data.leagues || []);
     } catch (err) {
       console.error("Failed to fetch leagues:", err);
+      // Fallback leagues for UI display when API is unavailable
+      setLeagues([
+        { id: "bronze", name: "🥉 Қола" },
+        { id: "silver", name: "🥈 Күміс" },
+        { id: "gold", name: "🥇 Алтын" },
+        { id: "platinum", name: "💎 Платина" },
+        { id: "diamond", name: "👑 Алмас" }
+      ]);
     }
   };
 
@@ -103,11 +111,9 @@ export default function LeaguesPage() {
       const data = await res.json();
       setLeagueUsers(data.users || []);
     } catch (err) {
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        setError(`API серверіне қосылу мүмкін емес.\n\nBot серверін іске қосыңыз:\ncd bot && python main.py\n\nСервер: ${apiUrl}`);
-      } else {
-        setError(err instanceof Error ? err.message : "Қате болды");
-      }
+      console.error("Failed to fetch league leaderboard:", err);
+      // Don't show global error, just show empty users
+      setLeagueUsers([]);
     } finally {
       setLoading(false);
     }
@@ -206,12 +212,13 @@ export default function LeaguesPage() {
             🏆 Лигалар
           </h1>
           
-          <div className="flex flex-wrap gap-3 justify-center">
+          {/* Mobile: horizontal swipeable carousel, Desktop: flex wrap */}
+          <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide md:flex-wrap md:justify-center md:overflow-x-visible md:snap-none">
             {leagues.map((league) => (
               <button
                 key={league.id}
                 onClick={() => setCurrentLeague(league.id)}
-                className={`px-6 py-3 rounded-lg font-bold transition ${
+                className={`px-6 py-3 rounded-lg font-bold transition flex-shrink-0 snap-center md:flex-shrink md:snap-align-none ${
                   currentLeague === league.id
                     ? "bg-blue-600 text-white shadow-lg scale-105"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
