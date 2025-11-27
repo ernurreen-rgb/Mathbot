@@ -5,7 +5,7 @@ from typing import Dict, Any, List, Optional
 DB_NAME = "database.db"
 MAX_NICKNAME_LENGTH = 30
 GROUP_MIN_SIZE = 30  # Minimum users in a group before creating new one
-GROUP_MAX_SIZE = 50  # Maximum users in a group
+GROUP_MAX_SIZE = 30  # Maximum users in a group
 
 
 async def init_db() -> None:

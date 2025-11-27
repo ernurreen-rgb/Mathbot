@@ -266,7 +266,7 @@ export default function LeaguesPage() {
                 return (
                   <div
                     key={user.source === 'telegram' ? `tg-${user.user_id}` : `web-${user.email}`}
-                    className={`flex items-center justify-between p-4 rounded-lg transition ${
+                    className={`flex items-center justify-between p-2 sm:p-3 md:p-4 rounded-lg transition ${
                       zone === "promotion"
                         ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400'
                         : zone === "demotion"
@@ -276,8 +276,8 @@ export default function LeaguesPage() {
                         : 'bg-gray-50 hover:bg-gray-100'
                     }`}
                   >
-                    <div className="flex items-center gap-4 flex-1">
-                      <span className={`text-2xl font-bold min-w-[50px] ${
+                    <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+                      <span className={`text-lg sm:text-xl md:text-2xl font-bold min-w-[36px] sm:min-w-[44px] md:min-w-[50px] ${
                         zone === "promotion" ? 'text-green-600' : 
                         zone === "demotion" ? 'text-red-600' : 'text-gray-600'
                       }`}>
@@ -285,15 +285,15 @@ export default function LeaguesPage() {
                         {zone === "promotion" && " ⬆️"}
                         {zone === "demotion" && " ⬇️"}
                       </span>
-                      <div className="flex-1">
-                        <p className={`font-bold ${isCurrentUser ? 'text-lg text-blue-700' : 'text-base text-gray-800'}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className={`truncate font-bold ${isCurrentUser ? 'text-base sm:text-lg text-blue-700' : 'text-sm sm:text-base text-gray-800'}`}>
                           {displayName}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-blue-600">⚡{user.weekly_points}</p>
-                      <p className="text-sm text-gray-500">💎 {user.points}</p>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600">⚡{user.weekly_points}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">💎 {user.points}</p>
                     </div>
                   </div>
                 );
