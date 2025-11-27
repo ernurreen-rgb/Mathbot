@@ -195,7 +195,7 @@ export default function LeaguesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Main container with safe padding */}
-      <div className="w-full max-w-lg mx-auto px-4 py-6 pb-20">
+      <div className="w-4/5 mx-auto px-4 py-6 pb-20">
         
         {/* Header */}
         <div className="text-center mb-6">
