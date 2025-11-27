@@ -145,6 +145,14 @@ export default function LeaguesPage() {
   }
 
   // Helper functions
+  
+  // Removes the emoji prefix from league name (e.g., "🥉 Қола" -> "Қола")
+  const getLeagueNameWithoutEmoji = (fullName: string | undefined): string => {
+    if (!fullName) return "Лига";
+    // Pattern matches: emoji (or any non-space chars) followed by a space at the start
+    return fullName.replace(/^[^\s]+\s/, '') || fullName;
+  };
+  
   const getLeagueEmoji = (leagueId: string) => {
     const emojis: Record<string, string> = {
       bronze: "🥉",
@@ -203,7 +211,7 @@ export default function LeaguesPage() {
                 <span className="text-3xl">{getLeagueEmoji(userLeagueInfo.league)}</span>
                 <div>
                   <p className="font-bold text-gray-800">
-                    {leagues.find(l => l.id === userLeagueInfo.league)?.name?.replace(/^[^\s]+\s/, '') || "Лига"}
+                    {getLeagueNameWithoutEmoji(leagues.find(l => l.id === userLeagueInfo.league)?.name)}
                   </p>
                   <p className="text-xs text-gray-600">
                     Орын: <span className="font-bold">#{userLeagueInfo.rank || "?"}</span>
@@ -294,8 +302,12 @@ export default function LeaguesPage() {
                     key={user.source === 'telegram' ? `tg-${user.user_id}` : `web-${user.email}`}
                     className={`flex items-center gap-3 px-4 py-3 ${rowBg}`}
                   >
-                    {/* Position */}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${positionBg}`}>
+                    {/* Position indicator with accessibility */}
+                    <div 
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${positionBg}`}
+                      aria-label={`Орын ${position}`}
+                      role="text"
+                    >
                       {position === 1 ? "👑" : position}
                     </div>
                     
