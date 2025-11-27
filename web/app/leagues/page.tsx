@@ -119,45 +119,57 @@ export default function LeaguesPage() {
     }
   };
 
+  // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 px-4">
-        <div className="text-center max-w-2xl p-8 bg-white rounded-2xl shadow-xl">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">⚠️ Қате</h2>
-          <pre className="text-left text-gray-700 mb-6 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm">{error}</pre>
-          <div className="space-y-3">
-            <button
-              onClick={() => fetchLeagueLeaderboard(currentLeague)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
-            >
-              🔄 Қайталап көру
-            </button>
-            <a
-              href="/"
-              className="block text-blue-600 hover:text-blue-800 font-semibold underline"
-            >
-              ← Басты бетке қайту
-            </a>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+        <div className="w-full max-w-md text-center p-6 bg-white rounded-2xl shadow-xl">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-red-600 mb-3">Қате</h2>
+          <p className="text-gray-700 mb-6 text-sm break-words">{error}</p>
+          <button
+            onClick={() => fetchLeagueLeaderboard(currentLeague)}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition mb-3"
+          >
+            🔄 Қайталап көру
+          </button>
+          <a
+            href="/"
+            className="block text-blue-600 hover:text-blue-800 font-semibold"
+          >
+            ← Басты бетке қайту
+          </a>
         </div>
       </div>
     );
   }
 
-  const getLeagueColor = (league: string) => {
-    const colors: Record<string, string> = {
-      bronze: "from-orange-100 to-amber-100 border-orange-300",
-      silver: "from-gray-100 to-slate-100 border-gray-300",
-      gold: "from-yellow-100 to-amber-100 border-yellow-400",
-      platinum: "from-cyan-100 to-blue-100 border-cyan-400",
-      diamond: "from-purple-100 to-pink-100 border-purple-400"
+  // Helper functions
+  const getLeagueEmoji = (leagueId: string) => {
+    const emojis: Record<string, string> = {
+      bronze: "🥉",
+      silver: "🥈",
+      gold: "🥇",
+      platinum: "💎",
+      diamond: "👑"
     };
-    return colors[league] || colors.bronze;
+    return emojis[leagueId] || "🏆";
+  };
+
+  const getLeagueBgColor = (leagueId: string) => {
+    const colors: Record<string, string> = {
+      bronze: "bg-gradient-to-br from-orange-100 to-amber-50",
+      silver: "bg-gradient-to-br from-gray-100 to-slate-50",
+      gold: "bg-gradient-to-br from-yellow-100 to-amber-50",
+      platinum: "bg-gradient-to-br from-cyan-100 to-blue-50",
+      diamond: "bg-gradient-to-br from-purple-100 to-pink-50"
+    };
+    return colors[leagueId] || colors.bronze;
   };
 
   const getPromotionZone = (position: number, total: number) => {
-    const PROMOTION_THRESHOLD = 7;  // Top 7 users get promoted (Duolingo: 7-10)
-    const DEMOTION_THRESHOLD = 5;   // Bottom 5 users get demoted (Duolingo: 5-10)
+    const PROMOTION_THRESHOLD = 7;
+    const DEMOTION_THRESHOLD = 5;
     const MIN_USERS_FOR_DEMOTION = PROMOTION_THRESHOLD + DEMOTION_THRESHOLD + 1;
     
     if (position <= PROMOTION_THRESHOLD) return "promotion";
@@ -165,63 +177,67 @@ export default function LeaguesPage() {
     return "safe";
   };
 
+  const getDisplayName = (user: User) => {
+    if (user.source === 'telegram') {
+      return user.username || user.full_name || `User ${user.user_id}`;
+    }
+    return user.nickname || user.name || 'Web User';
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto">
-        {/* User League Info */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Main container with safe padding */}
+      <div className="w-full max-w-lg mx-auto px-4 py-6 pb-20">
+        
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">🏆 Лигалар</h1>
+          <p className="text-sm text-gray-500 mt-1">Апталық жарыс</p>
+        </div>
+
+        {/* User's Current League Card */}
         {session && userLeagueInfo && (
-          <div className={`bg-gradient-to-r ${getLeagueColor(userLeagueInfo.league)} border-2 rounded-2xl shadow-xl p-6 mb-8`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                  {leagues.find(l => l.id === userLeagueInfo.league)?.name || "Лига"}
-                </h2>
-                <p className="text-gray-600">
-                  Орын: <span className="font-bold text-xl">#{userLeagueInfo.rank || "?"}</span>
-                </p>
-                {userLeagueInfo.league_group_id && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    🎯 Топ #{userLeagueInfo.league_group_id}
+          <div className={`${getLeagueBgColor(userLeagueInfo.league)} rounded-2xl p-4 mb-5 shadow-lg border border-white/50`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{getLeagueEmoji(userLeagueInfo.league)}</span>
+                <div>
+                  <p className="font-bold text-gray-800">
+                    {leagues.find(l => l.id === userLeagueInfo.league)?.name?.replace(/^[^\s]+\s/, '') || "Лига"}
                   </p>
-                )}
-                {!userLeagueInfo.league_group_id && (
-                  <p className="text-sm text-amber-600 mt-1">
-                    ⚠️ Топқа қосылу үшін есеп шешіңіз!
+                  <p className="text-xs text-gray-600">
+                    Орын: <span className="font-bold">#{userLeagueInfo.rank || "?"}</span>
+                    {userLeagueInfo.league_group_id && (
+                      <span className="ml-2">• Топ #{userLeagueInfo.league_group_id}</span>
+                    )}
                   </p>
-                )}
+                </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Апталық ұпай</p>
-                <p className="text-4xl font-bold text-blue-600">⚡{userLeagueInfo.weekly_points}</p>
+                <p className="text-2xl font-bold text-blue-600">⚡{userLeagueInfo.weekly_points}</p>
+                <p className="text-xs text-gray-500">апталық</p>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-300">
-              <p className="text-sm text-gray-600">
-                💡 Топ 7 жоғары лигаға көтеріледі • Соңғы 5 төмен лигаға түседі
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                📊 Сіз өз тобыңыздағы {leagueUsers.length || 30}-50 қолданушымен жарысасыз
-              </p>
-            </div>
+            
+            {!userLeagueInfo.league_group_id && (
+              <div className="bg-amber-100 text-amber-800 text-xs p-2 rounded-lg text-center">
+                ⚠️ Топқа қосылу үшін есеп шешіңіз!
+              </div>
+            )}
           </div>
         )}
 
-        {/* League Selector */}
-        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-8 overflow-hidden">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">
-            🏆 Лигалар
-          </h1>
-          
-          {/* Mobile: horizontal swipeable carousel, Desktop: flex wrap */}
-          <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide md:flex-wrap md:justify-center md:overflow-x-visible md:snap-none">
+        {/* League Selector - Horizontal scroll */}
+        <div className="mb-5">
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {leagues.map((league) => (
               <button
                 key={league.id}
                 onClick={() => setCurrentLeague(league.id)}
-                className={`px-6 py-3 rounded-lg font-bold transition flex-shrink-0 snap-center md:shrink ${
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                   currentLeague === league.id
-                    ? "bg-blue-600 text-white shadow-lg scale-105"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "bg-white text-gray-700 border border-gray-200"
                 }`}
               >
                 {league.name}
@@ -230,70 +246,73 @@ export default function LeaguesPage() {
           </div>
         </div>
 
-        {/* League Leaderboard */}
-        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6 text-center break-words">
-            {leagues.find(l => l.id === currentLeague)?.name || "Лига"} - Апталық рейтинг
-          </h2>
+        {/* Leaderboard Card */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Leaderboard Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3">
+            <h2 className="text-white font-bold text-center">
+              {leagues.find(l => l.id === currentLeague)?.name || "Лига"} рейтингі
+            </h2>
+          </div>
 
+          {/* Loading State */}
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-xl text-gray-600">Рейтинг жүктелуде...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600 mb-3"></div>
+              <p className="text-gray-500 text-sm">Жүктелуде...</p>
             </div>
           ) : leagueUsers.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-xl text-gray-600">Әзірше қолданушылар жоқ</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <span className="text-4xl mb-3">🏜️</span>
+              <p className="text-gray-500">Қолданушылар жоқ</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="divide-y divide-gray-100">
               {leagueUsers.map((user, index) => {
                 const position = index + 1;
                 const zone = getPromotionZone(position, leagueUsers.length);
                 const isCurrentUser = session?.user?.email && user.email === session.user.email;
+                const displayName = getDisplayName(user);
                 
-                let displayName = '';
-                if (user.source === 'telegram') {
-                  displayName = user.username || user.full_name || `User ${user.user_id}`;
-                } else {
-                  displayName = user.nickname || user.name || 'Web User';
-                }
+                // Position indicator styling
+                let positionBg = "bg-gray-100 text-gray-600";
+                let rowBg = "";
                 
-                if (isCurrentUser) {
-                  displayName += " (Сіз)";
+                if (zone === "promotion") {
+                  positionBg = "bg-green-500 text-white";
+                  rowBg = "bg-green-50";
+                } else if (zone === "demotion") {
+                  positionBg = "bg-red-400 text-white";
+                  rowBg = "bg-red-50";
+                } else if (isCurrentUser) {
+                  positionBg = "bg-blue-500 text-white";
+                  rowBg = "bg-blue-50";
                 }
                 
                 return (
                   <div
                     key={user.source === 'telegram' ? `tg-${user.user_id}` : `web-${user.email}`}
-                    className={`flex items-center justify-between p-2 sm:p-3 md:p-4 rounded-lg transition ${
-                      zone === "promotion"
-                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400'
-                        : zone === "demotion"
-                        ? 'bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300'
-                        : isCurrentUser
-                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-400'
-                        : 'bg-gray-50 hover:bg-gray-100'
-                    }`}
+                    className={`flex items-center gap-3 px-4 py-3 ${rowBg}`}
                   >
-                    <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                      <span className={`text-lg sm:text-xl md:text-2xl font-bold min-w-[36px] sm:min-w-[44px] md:min-w-[50px] ${
-                        zone === "promotion" ? 'text-green-600' : 
-                        zone === "demotion" ? 'text-red-600' : 'text-gray-600'
-                      }`}>
-                        {position === 1 ? "👑" : `${position}.`}
-                        {zone === "promotion" && " ⬆️"}
-                        {zone === "demotion" && " ⬇️"}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className={`truncate font-bold ${isCurrentUser ? 'text-base sm:text-lg text-blue-700' : 'text-sm sm:text-base text-gray-800'}`}>
-                          {displayName}
-                        </p>
-                      </div>
+                    {/* Position */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${positionBg}`}>
+                      {position === 1 ? "👑" : position}
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600">⚡{user.weekly_points}</p>
-                      <p className="text-xs sm:text-sm text-gray-500">💎 {user.points}</p>
+                    
+                    {/* User info */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-semibold truncate ${isCurrentUser ? 'text-blue-700' : 'text-gray-800'}`}>
+                        {displayName}
+                        {isCurrentUser && <span className="text-blue-500 ml-1">(Сіз)</span>}
+                      </p>
+                      <p className="text-xs text-gray-400">💎 {user.points} ұпай</p>
+                    </div>
+                    
+                    {/* Weekly points */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <span className="text-lg font-bold text-blue-600">⚡{user.weekly_points}</span>
+                      {zone === "promotion" && <span className="text-green-500">↑</span>}
+                      {zone === "demotion" && <span className="text-red-500">↓</span>}
                     </div>
                   </div>
                 );
@@ -301,18 +320,33 @@ export default function LeaguesPage() {
             </div>
           )}
 
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-gray-700">
-              <strong>Ескерту:</strong> Апталық рейтинг жексенбі сайын нөлге тасталады. 
-              Топ 7 қолданушы жоғары лигаға көтеріледі, соңғы 5 төмен лигаға түседі.
-            </p>
+          {/* Legend */}
+          <div className="bg-gray-50 px-4 py-3 border-t border-gray-100">
+            <div className="flex flex-wrap justify-center gap-3 text-xs">
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span className="text-gray-600">Көтеріледі (Топ 7)</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 bg-red-400 rounded-full"></span>
+                <span className="text-gray-600">Түседі (Соңғы 5)</span>
+              </span>
+            </div>
           </div>
         </div>
 
+        {/* Info note */}
+        <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+          <p className="text-xs text-gray-600 text-center">
+            📅 Апталық рейтинг жексенбі сайын нөлге тасталады
+          </p>
+        </div>
+
+        {/* Back button */}
         <div className="mt-6 text-center">
           <a
             href="/"
-            className="text-blue-600 hover:text-blue-800 font-semibold underline"
+            className="inline-block text-blue-600 hover:text-blue-800 font-semibold text-sm"
           >
             ← Басты бетке қайту
           </a>
