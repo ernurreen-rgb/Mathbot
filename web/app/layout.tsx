@@ -22,7 +22,7 @@ export default function RootLayout({
           <UserBar />
 
           {/* Негізгі контент */}
-          <main className="flex flex-col items-center justify-center min-h-screen px-4">
+          <main className="w-full">
             {children}
           </main>
 
