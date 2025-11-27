@@ -237,7 +237,7 @@ export default function LeaguesPage() {
 
         {/* League Selector - Horizontal scroll */}
         <div className="mb-5">
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-2 scrollbar-hide">
             {leagues.map((league) => (
               <button
                 key={league.id}
