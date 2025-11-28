@@ -21,11 +21,6 @@ export default function RootLayout({
           <main className="flex flex-col items-center justify-center min-h-screen px-4">
             {children}
           </main>
-
-          {/* Төменгі колонтитул */}
-          <footer className="absolute bottom-4 text-center text-gray-500 text-sm">
-            © 2025 EsepBot – Қазақстандық олимпиадалық математика платформасы
-          </footer>
         </Providers>
       </body>
     </html>

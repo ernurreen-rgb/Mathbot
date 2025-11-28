@@ -147,10 +147,10 @@ export default function ProfilePage() {
   // Show loading state
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-white to-slate-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-400 mx-auto mb-4"></div>
-          <p className="text-xl text-purple-200">Жүктелуде...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-xl text-slate-600">Жүктелуде...</p>
         </div>
       </div>
     );
@@ -159,25 +159,25 @@ export default function ProfilePage() {
   // Show sign in page if not authenticated
   if (status === "unauthenticated") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-12 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 py-12 px-4">
         <div className="max-w-md mx-auto">
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
-            <h1 className="text-3xl font-bold text-white mb-8 text-center">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-200">
+            <h1 className="text-3xl font-bold text-slate-800 mb-8 text-center">
               👤 Профиль
             </h1>
 
             <div className="text-center py-8">
               <div className="text-6xl mb-4">🔐</div>
-              <h2 className="text-xl font-bold text-white mb-3">
+              <h2 className="text-xl font-bold text-slate-800 mb-3">
                 Профильді көру үшін кіріңіз
               </h2>
-              <p className="text-purple-200 mb-6 text-sm">
+              <p className="text-slate-600 mb-6 text-sm">
                 Google арқылы кіріп, ұпай жинап, рейтингте көріне аласыз
               </p>
               <div className="space-y-4">
                 <button
                   onClick={() => signIn("google")}
-                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl transition shadow-lg"
+                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl transition shadow-lg border border-slate-200"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -189,7 +189,7 @@ export default function ProfilePage() {
                 </button>
                 <a
                   href="/"
-                  className="block w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-6 rounded-xl transition text-center"
+                  className="block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-xl transition text-center"
                 >
                   ← Басты бетке қайту
                 </a>
@@ -205,14 +205,14 @@ export default function ProfilePage() {
   const unlockedCount = achievements.filter(a => a.unlocked).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 py-8 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
         
         {/* Profile Header Card */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-6 border border-white/20 relative overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-2xl p-6 border border-slate-200 relative overflow-hidden">
           {/* Decorative background */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100 to-slate-100 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br from-slate-100 to-gray-100 rounded-full blur-2xl"></div>
           
           <div className="relative">
             {/* Sign out button */}
@@ -224,15 +224,15 @@ export default function ProfilePage() {
             </button>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 text-sm">
+              <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-xl text-red-600 text-sm">
                 {error}
               </div>
             )}
 
             {loading ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-purple-400 mx-auto mb-4"></div>
-                <p className="text-purple-200">Жүктелуде...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-slate-600">Жүктелуде...</p>
               </div>
             ) : stats ? (
               <div className="space-y-6">
@@ -241,32 +241,32 @@ export default function ProfilePage() {
                   {/* Avatar with level ring */}
                   <div className="relative mb-4">
                     <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${leagueColors[stats.league || "bronze"]} p-1 animate-pulse`}>
-                      <div className="w-full h-full rounded-full bg-slate-900"></div>
+                      <div className="w-full h-full rounded-full bg-white"></div>
                     </div>
                     <div className="relative p-1">
                       {session?.user?.image ? (
                         <img
                           src={session.user.image}
                           alt="Profile"
-                          className="w-24 h-24 rounded-full border-4 border-slate-900"
+                          className="w-24 h-24 rounded-full border-4 border-white"
                         />
                       ) : (
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-4xl">
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-slate-500 flex items-center justify-center text-4xl">
                           👤
                         </div>
                       )}
                     </div>
                     {/* Level badge */}
-                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-500 to-slate-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                       LVL {levelInfo.level}
                     </div>
                   </div>
 
                   {/* Name */}
-                  <h2 className="text-2xl font-bold text-white mb-1">
+                  <h2 className="text-2xl font-bold text-slate-800 mb-1">
                     {stats.nickname || session?.user?.name || stats.name}
                   </h2>
-                  <p className="text-purple-300 text-sm mb-3">{session?.user?.email}</p>
+                  <p className="text-slate-500 text-sm mb-3">{session?.user?.email}</p>
 
                   {/* League Badge */}
                   <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${leagueColors[stats.league || "bronze"]} text-white font-semibold shadow-lg`}>
@@ -275,21 +275,21 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Level Progress Bar */}
-                <div className="bg-white/5 rounded-xl p-4">
-                  <div className="flex justify-between text-sm text-purple-200 mb-2">
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <div className="flex justify-between text-sm text-slate-600 mb-2">
                     <span>Деңгей {levelInfo.level}</span>
                     <span>{stats.points} / {levelInfo.nextLevelPoints} ұпай</span>
                   </div>
-                  <div className="h-3 bg-slate-700/50 rounded-full overflow-hidden">
+                  <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 rounded-full transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-blue-500 via-slate-500 to-gray-600 rounded-full transition-all duration-500"
                       style={{ width: `${levelInfo.progress}%` }}
                     ></div>
                   </div>
                 </div>
 
                 {/* Nickname Section */}
-                <div className="bg-white/5 rounded-xl p-4">
+                <div className="bg-slate-50 rounded-xl p-4">
                   {isEditingNickname ? (
                     <div className="space-y-2">
                       <input
@@ -298,12 +298,12 @@ export default function ProfilePage() {
                         onChange={(e) => setNickname(e.target.value)}
                         placeholder="Никнейм енгізіңіз"
                         maxLength={30}
-                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-purple-300 focus:border-purple-400 focus:outline-none"
+                        className="w-full px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none"
                       />
                       <div className="flex gap-2">
                         <button
                           onClick={handleUpdateNickname}
-                          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition font-semibold"
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition font-semibold"
                         >
                           Сақтау
                         </button>
@@ -313,7 +313,7 @@ export default function ProfilePage() {
                             setNickname(stats.nickname || "");
                             setNicknameError(null);
                           }}
-                          className="px-4 text-purple-300 hover:text-white transition"
+                          className="px-4 text-slate-500 hover:text-slate-800 transition"
                         >
                           Болдырмау
                         </button>
@@ -325,7 +325,7 @@ export default function ProfilePage() {
                   ) : (
                     <button
                       onClick={() => setIsEditingNickname(true)}
-                      className="w-full text-purple-300 hover:text-white text-sm transition flex items-center justify-center gap-2"
+                      className="w-full text-slate-500 hover:text-slate-800 text-sm transition flex items-center justify-center gap-2"
                     >
                       ✏️ {stats.nickname ? "Никнеймді өзгерту" : "Никнейм қосу (рейтингте көріну үшін)"}
                     </button>
@@ -333,7 +333,7 @@ export default function ProfilePage() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-purple-200">
+              <div className="text-center py-8 text-slate-600">
                 Профиль деректері табылмады
               </div>
             )}
@@ -343,31 +343,31 @@ export default function ProfilePage() {
         {/* Stats Grid */}
         {stats && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-lg rounded-2xl p-5 border border-yellow-500/30 text-center">
-              <p className="text-3xl font-bold text-yellow-400">{stats.points}</p>
-              <p className="text-yellow-200/80 text-sm mt-1">💎 Жалпы ұпай</p>
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-lg text-center">
+              <p className="text-3xl font-bold text-yellow-500">{stats.points}</p>
+              <p className="text-slate-500 text-sm mt-1">💎 Жалпы ұпай</p>
             </div>
-            <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-lg rounded-2xl p-5 border border-green-500/30 text-center">
-              <p className="text-3xl font-bold text-green-400">{stats.solved_count}</p>
-              <p className="text-green-200/80 text-sm mt-1">🧩 Шешілген есептер</p>
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-lg text-center">
+              <p className="text-3xl font-bold text-green-500">{stats.solved_count}</p>
+              <p className="text-slate-500 text-sm mt-1">🧩 Шешілген есептер</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-500/20 to-indigo-500/20 backdrop-blur-lg rounded-2xl p-5 border border-blue-500/30 text-center">
-              <p className="text-3xl font-bold text-blue-400">{stats.weekly_points || 0}</p>
-              <p className="text-blue-200/80 text-sm mt-1">⚡ Апталық ұпай</p>
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-lg text-center">
+              <p className="text-3xl font-bold text-blue-500">{stats.weekly_points || 0}</p>
+              <p className="text-slate-500 text-sm mt-1">⚡ Апталық ұпай</p>
             </div>
-            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-2xl p-5 border border-purple-500/30 text-center">
-              <p className="text-3xl font-bold text-purple-400">{unlockedCount}</p>
-              <p className="text-purple-200/80 text-sm mt-1">🏅 Жетістіктер</p>
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-lg text-center">
+              <p className="text-3xl font-bold text-indigo-500">{unlockedCount}</p>
+              <p className="text-slate-500 text-sm mt-1">🏅 Жетістіктер</p>
             </div>
           </div>
         )}
 
         {/* Achievements Section */}
         {achievements.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-6 border border-white/20">
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 border border-slate-200">
+            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
               🏅 Жетістіктер
-              <span className="text-sm font-normal text-purple-300">
+              <span className="text-sm font-normal text-slate-500">
                 ({unlockedCount}/{achievements.length})
               </span>
             </h3>
@@ -378,13 +378,13 @@ export default function ProfilePage() {
                   key={achievement.id}
                   className={`relative p-3 rounded-xl text-center transition-all ${
                     achievement.unlocked
-                      ? "bg-gradient-to-br from-purple-500/30 to-pink-500/30 border border-purple-400/50"
-                      : "bg-white/5 border border-white/10 opacity-50 grayscale"
+                      ? "bg-gradient-to-br from-blue-100 to-slate-100 border border-blue-300"
+                      : "bg-slate-50 border border-slate-200 opacity-50 grayscale"
                   }`}
                   title={achievement.description}
                 >
                   <div className="text-3xl mb-1">{achievement.icon}</div>
-                  <p className="text-xs text-white font-medium truncate">{getAchievementShortName(achievement.name)}</p>
+                  <p className="text-xs text-slate-700 font-medium truncate">{getAchievementShortName(achievement.name)}</p>
                   {achievement.unlocked && (
                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-xs">✓</span>
@@ -412,7 +412,7 @@ export default function ProfilePage() {
           </a>
           <a
             href="/rating"
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg text-center text-sm"
+            className="bg-gradient-to-r from-slate-600 to-gray-600 hover:from-slate-700 hover:to-gray-700 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg text-center text-sm"
           >
             📊 Рейтинг
           </a>
@@ -422,7 +422,7 @@ export default function ProfilePage() {
         <div className="text-center">
           <a
             href="/"
-            className="text-purple-300 hover:text-white font-semibold transition"
+            className="text-slate-500 hover:text-slate-800 font-semibold transition"
           >
             ← Басты бетке қайту
           </a>

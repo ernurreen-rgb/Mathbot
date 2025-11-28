@@ -67,12 +67,13 @@ export default function Home() {
 
         {/* Сипаттама */}
         <p className="text-2xl md:text-3xl text-gray-800 mb-4 font-medium">
-          Қазақстандық олимпиадалық математика платформасы
+          Ернұр ағайдың есептері
         </p>
-
+        
+        {/* Сипаттама 
         <p className="text-lg md:text-xl text-gray-600 mb-12 leading-relaxed">
-          Күнде жаңа есептер • Нағыз олимпиадалық есептер • Лигалық жүйе • Апталық жарыстар • Шешімдер
-        </p>
+          Күнде жаңа есептер • Лигалық жүйе • Апталық жарыстар
+        </p>*/}
 
         {/* Navigation buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
@@ -100,20 +101,6 @@ export default function Home() {
           >
             👤 Профиль
           </a>
-        </div>
-
-        {/* Төменгі статистика */}
-        <div className="mt-20 text-gray-500 text-sm md:text-base">
-          <p suppressHydrationWarning>
-            Қазір {new Date().toLocaleDateString(undefined, {
-              day: "numeric",
-              month: "long",
-              year: "numeric"
-            })}
-          </p>
-          <p className="mt-2">
-            10 000+ шешілген есеп • 5 000+ белсенді оқушы
-          </p>
         </div>
       </div>
     </div>

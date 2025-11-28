@@ -167,13 +167,18 @@ async def ensure_web_user(email: str, name: str, google_id: str) -> None:
         await conn.commit()
 
 
+async def _fetch_web_user_stats(conn: aiosqlite.Connection, email: str) -> Optional[Dict[str, Any]]:
+    """Internal helper to fetch web user stats using an existing connection."""
+    async with conn.execute("SELECT * FROM web_users WHERE email = ?", (email,)) as cur:
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
 async def get_web_user_stats(email: str) -> Optional[Dict[str, Any]]:
     """Веб қолданушының статистикасын алу"""
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
-        async with conn.execute("SELECT * FROM web_users WHERE email = ?", (email,)) as cur:
-            row = await cur.fetchone()
-            return dict(row) if row else None
+        return await _fetch_web_user_stats(conn, email)
 
 
 async def update_web_user_nickname(email: str, nickname: str) -> None:
@@ -608,22 +613,40 @@ async def get_user_league_info(user_id: int) -> Optional[Dict[str, Any]]:
                 return None
             
             result = dict(row)
+            league = result['league']
+            group_id = result.get('league_group_id')
             
-            # Лигадағы орынды табу (тек өз тобында)
-            if result.get('league_group_id'):
-                leaderboard = await get_league_leaderboard(
-                    result['league'], 
-                    limit=100, 
-                    group_id=result['league_group_id']
-                )
+            # Calculate rank directly in SQL instead of fetching entire leaderboard
+            if group_id:
+                async with conn.execute(
+                    """SELECT COUNT(*) + 1 as rank FROM (
+                        SELECT weekly_points, points FROM users 
+                        WHERE league = ? AND league_group_id = ? AND user_id != ?
+                        UNION ALL
+                        SELECT weekly_points, points FROM web_users 
+                        WHERE league = ? AND league_group_id = ? AND nickname IS NOT NULL AND nickname != ''
+                    ) combined 
+                    WHERE weekly_points > ? OR (weekly_points = ? AND points > ?)""",
+                    (league, group_id, user_id, league, group_id, 
+                     result['weekly_points'], result['weekly_points'], result['points'])
+                ) as cur:
+                    rank_row = await cur.fetchone()
+                    result['rank'] = rank_row['rank'] if rank_row else 1
             else:
-                # Топ жоқ болса, барлық лига (ескі мінез-құлық)
-                leaderboard = await get_league_leaderboard(result['league'], limit=100)
-            
-            for i, user in enumerate(leaderboard):
-                if user.get('user_id') == user_id:
-                    result['rank'] = i + 1
-                    break
+                async with conn.execute(
+                    """SELECT COUNT(*) + 1 as rank FROM (
+                        SELECT weekly_points, points FROM users 
+                        WHERE league = ? AND user_id != ?
+                        UNION ALL
+                        SELECT weekly_points, points FROM web_users 
+                        WHERE league = ? AND nickname IS NOT NULL AND nickname != ''
+                    ) combined 
+                    WHERE weekly_points > ? OR (weekly_points = ? AND points > ?)""",
+                    (league, user_id, league, 
+                     result['weekly_points'], result['weekly_points'], result['points'])
+                ) as cur:
+                    rank_row = await cur.fetchone()
+                    result['rank'] = rank_row['rank'] if rank_row else 1
             
             return result
 
@@ -641,22 +664,40 @@ async def get_web_user_league_info(email: str) -> Optional[Dict[str, Any]]:
                 return None
             
             result = dict(row)
+            league = result['league']
+            group_id = result.get('league_group_id')
             
-            # Лигадағы орынды табу (тек өз тобында)
-            if result.get('league_group_id'):
-                leaderboard = await get_league_leaderboard(
-                    result['league'], 
-                    limit=100, 
-                    group_id=result['league_group_id']
-                )
+            # Calculate rank directly in SQL instead of fetching entire leaderboard
+            if group_id:
+                async with conn.execute(
+                    """SELECT COUNT(*) + 1 as rank FROM (
+                        SELECT weekly_points, points FROM users 
+                        WHERE league = ? AND league_group_id = ?
+                        UNION ALL
+                        SELECT weekly_points, points FROM web_users 
+                        WHERE league = ? AND league_group_id = ? AND email != ? AND nickname IS NOT NULL AND nickname != ''
+                    ) combined 
+                    WHERE weekly_points > ? OR (weekly_points = ? AND points > ?)""",
+                    (league, group_id, league, group_id, email,
+                     result['weekly_points'], result['weekly_points'], result['points'])
+                ) as cur:
+                    rank_row = await cur.fetchone()
+                    result['rank'] = rank_row['rank'] if rank_row else 1
             else:
-                # Топ жоқ болса, барлық лига
-                leaderboard = await get_league_leaderboard(result['league'], limit=100)
-            
-            for i, user in enumerate(leaderboard):
-                if user.get('email') == email:
-                    result['rank'] = i + 1
-                    break
+                async with conn.execute(
+                    """SELECT COUNT(*) + 1 as rank FROM (
+                        SELECT weekly_points, points FROM users 
+                        WHERE league = ?
+                        UNION ALL
+                        SELECT weekly_points, points FROM web_users 
+                        WHERE league = ? AND email != ? AND nickname IS NOT NULL AND nickname != ''
+                    ) combined 
+                    WHERE weekly_points > ? OR (weekly_points = ? AND points > ?)""",
+                    (league, league, email,
+                     result['weekly_points'], result['weekly_points'], result['points'])
+                ) as cur:
+                    rank_row = await cur.fetchone()
+                    result['rank'] = rank_row['rank'] if rank_row else 1
             
             return result
 
@@ -842,38 +883,45 @@ async def unlock_achievement(email: str, achievement_id: str) -> bool:
 
 async def check_and_unlock_achievements(email: str) -> List[str]:
     """Қолданушының статистикасына сәйкес жетістіктерді тексеру және ашу"""
-    # Қолданушы статистикасын алу
-    stats = await get_web_user_stats(email)
-    if not stats:
-        return []
-    
-    # Ашылған жетістіктерді алу
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
+        
+        # Fetch user stats using shared helper (reuses query logic)
+        stats = await _fetch_web_user_stats(conn, email)
+        if not stats:
+            return []
+        
         async with conn.execute(
             "SELECT achievement_id FROM web_user_achievements WHERE email = ?",
             (email,)
         ) as cur:
             already_unlocked = {row['achievement_id'] for row in await cur.fetchall()}
-    
-    newly_unlocked = []
-    
-    for ach_id, ach in ACHIEVEMENTS.items():
-        if ach_id in already_unlocked:
-            continue
         
-        req = ach["requirement"]
-        should_unlock = False
+        # Determine which achievements should be unlocked
+        to_unlock = []
+        for ach_id, ach in ACHIEVEMENTS.items():
+            if ach_id in already_unlocked:
+                continue
+            
+            req = ach["requirement"]
+            should_unlock = False
+            
+            if req["type"] == "solved_count":
+                should_unlock = stats.get("solved_count", 0) >= req["value"]
+            elif req["type"] == "points":
+                should_unlock = stats.get("points", 0) >= req["value"]
+            elif req["type"] == "league":
+                should_unlock = stats.get("league") == req["value"]
+            
+            if should_unlock:
+                to_unlock.append(ach_id)
         
-        if req["type"] == "solved_count":
-            should_unlock = stats.get("solved_count", 0) >= req["value"]
-        elif req["type"] == "points":
-            should_unlock = stats.get("points", 0) >= req["value"]
-        elif req["type"] == "league":
-            should_unlock = stats.get("league") == req["value"]
+        # Batch insert all achievements to unlock
+        if to_unlock:
+            await conn.executemany(
+                "INSERT OR IGNORE INTO web_user_achievements (email, achievement_id) VALUES (?, ?)",
+                [(email, ach_id) for ach_id in to_unlock]
+            )
+            await conn.commit()
         
-        if should_unlock:
-            if await unlock_achievement(email, ach_id):
-                newly_unlocked.append(ach_id)
-    
-    return newly_unlocked
+        return to_unlock
