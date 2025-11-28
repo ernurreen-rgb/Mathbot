@@ -59,12 +59,13 @@ class AdminTaskUpdate(BaseModel):
     correct_option: str = None
     answer_type: str = None
 
+
 # Valid quiz options constant
 VALID_QUIZ_OPTIONS = ["A", "B", "C", "D"]
 
 # Admin emails that have access to admin panel (can be configured via environment variable)
-# Format: comma-separated list of emails, e.g., "admin1@gmail.com,admin2@gmail.com"
-_admin_emails_env = os.getenv("ADMIN_EMAILS", "ernurreen0408@gmail.com")
+# Format: comma-separated list of emails, e.g., "ernurreen@gmail.com"
+_admin_emails_env = os.getenv("ADMIN_EMAILS", "ernurreen@gmail.com")
 ADMIN_EMAILS = {email.strip() for email in _admin_emails_env.split(",") if email.strip()}
 
 def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> Optional[str]:
