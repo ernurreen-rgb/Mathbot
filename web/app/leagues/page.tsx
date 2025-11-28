@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 
 interface User {
   // Telegram users
@@ -26,20 +25,10 @@ interface League {
   name: string;
 }
 
-interface LeagueInfo {
-  league: string;
-  weekly_points: number;
-  points: number;
-  rank?: number;
-  league_group_id?: number;
-}
-
 export default function LeaguesPage() {
-  const { data: session } = useSession();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [currentLeague, setCurrentLeague] = useState<string>("bronze");
   const [leagueUsers, setLeagueUsers] = useState<User[]>([]);
-  const [userLeagueInfo, setUserLeagueInfo] = useState<LeagueInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,12 +37,6 @@ export default function LeaguesPage() {
   useEffect(() => {
     fetchLeagues();
   }, []);
-
-  useEffect(() => {
-    if (session?.user?.email) {
-      fetchUserLeagueInfo();
-    }
-  }, [session?.user?.email]);
 
   useEffect(() => {
     if (currentLeague) {
@@ -80,29 +63,11 @@ export default function LeaguesPage() {
     }
   };
 
-  const fetchUserLeagueInfo = async () => {
-    if (!session?.user?.email) return;
-    
-    try {
-      const res = await fetch(`${apiUrl}/api/user/web/${encodeURIComponent(session.user.email)}/league`);
-      if (!res.ok) throw new Error(`Сервер қатесі: ${res.status}`);
-      const data = await res.json();
-      setUserLeagueInfo(data);
-      setCurrentLeague(data.league || "bronze");
-    } catch (err) {
-      console.error("Failed to fetch user league info:", err);
-    }
-  };
-
   const fetchLeagueLeaderboard = async (league: string) => {
     setLoading(true);
     setError(null);
     try {
-      // Егер қолданушының өз лигасы болса, оның тобын көрсету
-      let url = `${apiUrl}/api/league/${league}?limit=30`;
-      if (session?.user?.email && userLeagueInfo?.league === league && userLeagueInfo?.league_group_id) {
-        url += `&group_id=${userLeagueInfo.league_group_id}`;
-      }
+      const url = `${apiUrl}/api/league/${league}?limit=30`;
       
       const res = await fetch(url);
       if (!res.ok) {
@@ -203,38 +168,6 @@ export default function LeaguesPage() {
           <p className="text-sm text-gray-500 mt-1">Апталық жарыс</p>
         </div>
 
-        {/* User's Current League Card */}
-        {session && userLeagueInfo && (
-          <div className={`${getLeagueBgColor(userLeagueInfo.league)} rounded-2xl p-4 mb-5 shadow-lg border border-white/50`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{getLeagueEmoji(userLeagueInfo.league)}</span>
-                <div>
-                  <p className="font-bold text-gray-800">
-                    {getLeagueNameWithoutEmoji(leagues.find(l => l.id === userLeagueInfo.league)?.name)}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    Орын: <span className="font-bold">#{userLeagueInfo.rank || "?"}</span>
-                    {userLeagueInfo.league_group_id && (
-                      <span className="ml-2">• Топ #{userLeagueInfo.league_group_id}</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-blue-600">⚡{userLeagueInfo.weekly_points}</p>
-                <p className="text-xs text-gray-500">апталық</p>
-              </div>
-            </div>
-            
-            {!userLeagueInfo.league_group_id && (
-              <div className="bg-amber-100 text-amber-800 text-xs p-2 rounded-lg text-center">
-                ⚠️ Топқа қосылу үшін есеп шешіңіз!
-              </div>
-            )}
-          </div>
-        )}
-
         {/* League Selector - Horizontal scroll */}
         <div className="mb-5">
           <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-2 **pl-4 pr-4** scrollbar-hide">
@@ -279,7 +212,6 @@ export default function LeaguesPage() {
               {leagueUsers.map((user, index) => {
                 const position = index + 1;
                 const zone = getPromotionZone(position, leagueUsers.length);
-                const isCurrentUser = session?.user?.email && user.email === session.user.email;
                 const displayName = getDisplayName(user);
                 
                 // Position indicator styling
@@ -292,9 +224,6 @@ export default function LeaguesPage() {
                 } else if (zone === "demotion") {
                   positionBg = "bg-red-400 text-white";
                   rowBg = "bg-red-50";
-                } else if (isCurrentUser) {
-                  positionBg = "bg-blue-500 text-white";
-                  rowBg = "bg-blue-50";
                 }
                 
                 return (
@@ -313,9 +242,8 @@ export default function LeaguesPage() {
                     
                     {/* User info */}
                     <div className="flex-1 min-w-0">
-                      <p className={`font-semibold truncate ${isCurrentUser ? 'text-blue-700' : 'text-gray-800'}`}>
+                      <p className="font-semibold truncate text-gray-800">
                         {displayName}
-                        {isCurrentUser && <span className="text-blue-500 ml-1">(Сіз)</span>}
                       </p>
                       <p className="text-xs text-gray-400">💎 {user.points} ұпай</p>
                     </div>
