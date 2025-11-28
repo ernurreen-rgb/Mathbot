@@ -5,11 +5,21 @@ import type { NextAuthOptions } from "next-auth";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Validate required environment variables
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+if (!googleClientId || !googleClientSecret) {
+  console.warn(
+    "Warning: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is not set. Google authentication will not work."
+  );
+}
+
 const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      clientId: googleClientId || "",
+      clientSecret: googleClientSecret || "",
     }),
   ],
   callbacks: {
@@ -34,7 +44,7 @@ const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       // Add user email to session for API calls
-      if (session.user) {
+      if (session.user && token.email) {
         session.user.email = token.email as string;
       }
       return session;
