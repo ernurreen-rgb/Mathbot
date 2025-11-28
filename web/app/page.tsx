@@ -1,4 +1,6 @@
 // web/app/page.tsx
+"use client";
+
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">

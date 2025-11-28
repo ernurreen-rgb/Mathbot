@@ -24,6 +24,7 @@ export default function ProfilePage() {
   const fetchUserStats = useCallback(async () => {
     // Without Google auth, we can't fetch user-specific stats
     // Show a message to use Telegram bot instead
+    setError(null);
     setLoading(false);
   }, [apiUrl]);
 
