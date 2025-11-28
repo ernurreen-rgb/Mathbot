@@ -493,6 +493,8 @@ async def admin_delete_task(
 async def admin_verify(email: str = Header(None, alias="X-Admin-Email")):
     """Verify if the user is an admin"""
     if not email or email.lower() not in ADMIN_EMAILS:
+        # Debug logging for troubleshooting (check server console)
+        print(f"Admin verify failed - Email: '{email}', Normalized: '{email.lower() if email else None}', Admin emails: {ADMIN_EMAILS}")
         return {"is_admin": False}
     return {"is_admin": True, "email": email}
 
