@@ -102,6 +102,18 @@ export default function Home() {
             👤 Профиль
           </a>
         </div>
+
+        {/* Admin link - only visible for admins */}
+        {session && (
+          <div className="mt-4">
+            <a
+              href="/admin"
+              className="text-gray-500 hover:text-gray-700 text-sm font-medium underline"
+            >
+              🔧 Әкімші панелі
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

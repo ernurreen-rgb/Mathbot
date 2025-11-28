@@ -19,7 +19,7 @@ import csv
 import database as db
 
 # === FastAPI HTTP API ===
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -49,6 +49,18 @@ class WebUserInfo(BaseModel):
 class NicknameUpdate(BaseModel):
     email: str
     nickname: str
+
+# Admin API models
+class AdminTaskCreate(BaseModel):
+    correct_option: str
+    answer_type: str = "quiz"
+
+class AdminTaskUpdate(BaseModel):
+    correct_option: str = None
+    answer_type: str = None
+
+# Admin emails that have access to admin panel
+ADMIN_EMAILS = {"ernurreen0408@gmail.com"}
 
 def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> Optional[str]:
     """Convert an absolute file path to a relative URL path.
@@ -237,6 +249,247 @@ async def serve_solution(filename: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Solution not found")
     return FileResponse(file_path)
+
+
+# ========== ADMIN API ==========
+
+def verify_admin_email(email: str = Header(None, alias="X-Admin-Email")) -> str:
+    """Verify that the request is from an admin user"""
+    if not email or email not in ADMIN_EMAILS:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return email
+
+
+@app.get("/api/admin/tasks")
+async def admin_get_all_tasks(
+    page: int = 1,
+    limit: int = 20,
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Get all tasks with pagination (admin only)"""
+    verify_admin_email(email)
+    
+    # Get all tasks
+    all_tasks = await db.list_tasks(limit=1000)
+    
+    # Calculate pagination
+    total = len(all_tasks)
+    start = (page - 1) * limit
+    end = start + limit
+    tasks = all_tasks[start:end]
+    
+    # Format tasks for frontend
+    formatted_tasks = []
+    for task in tasks:
+        formatted_tasks.append({
+            "id": task["id"],
+            "image_path": convert_to_relative_path(task["image_path"], "/images"),
+            "correct_option": task["correct_option"],
+            "answer_type": task.get("answer_type", "quiz"),
+            "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
+            "created_at": task.get("created_at"),
+            "created_by": task.get("created_by"),
+        })
+    
+    return {
+        "tasks": formatted_tasks,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit if total > 0 else 1
+    }
+
+
+@app.get("/api/admin/tasks/{task_id}")
+async def admin_get_task(
+    task_id: int,
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Get a specific task (admin only)"""
+    verify_admin_email(email)
+    
+    task = await db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {
+        "id": task["id"],
+        "image_path": convert_to_relative_path(task["image_path"], "/images"),
+        "correct_option": task["correct_option"],
+        "answer_type": task.get("answer_type", "quiz"),
+        "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
+        "created_at": task.get("created_at"),
+        "created_by": task.get("created_by"),
+    }
+
+
+@app.post("/api/admin/tasks")
+async def admin_create_task(
+    task_image: UploadFile = File(...),
+    solution_image: UploadFile = File(...),
+    correct_option: str = Form(...),
+    answer_type: str = Form("quiz"),
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Create a new task (admin only)"""
+    verify_admin_email(email)
+    
+    # Validate answer type
+    if answer_type not in ["quiz", "text"]:
+        raise HTTPException(status_code=400, detail="Invalid answer type. Must be 'quiz' or 'text'")
+    
+    # Validate quiz answer
+    if answer_type == "quiz" and correct_option.upper() not in ["A", "B", "C", "D"]:
+        raise HTTPException(status_code=400, detail="Quiz answer must be A, B, C, or D")
+    
+    # Create the task first to get the ID
+    task_id = await db.add_task(
+        image_path="",
+        correct_option=correct_option.upper() if answer_type == "quiz" else correct_option,
+        solution_image_path="",
+        answer_type=answer_type,
+        created_by=0  # Web admin
+    )
+    
+    # Use absolute paths for file storage
+    base_dir = Path(__file__).parent.absolute()
+    images_dir = base_dir / "images"
+    solutions_dir = base_dir / "solutions"
+    images_dir.mkdir(parents=True, exist_ok=True)
+    solutions_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save task image
+    task_image_path = images_dir / f"task_{task_id}.jpg"
+    try:
+        content = await task_image.read()
+        async with aiofiles.open(task_image_path, "wb") as f:
+            await f.write(content)
+        await db.update_task_image_path(task_id, str(task_image_path))
+    except Exception as e:
+        await db.delete_task(task_id)
+        raise HTTPException(status_code=500, detail=f"Failed to save task image: {str(e)}")
+    
+    # Save solution image
+    solution_image_path = solutions_dir / f"solution_{task_id}.jpg"
+    try:
+        content = await solution_image.read()
+        async with aiofiles.open(solution_image_path, "wb") as f:
+            await f.write(content)
+        await db.update_task_solution_image_path(task_id, str(solution_image_path))
+    except Exception as e:
+        # Clean up task image if solution fails
+        if task_image_path.exists():
+            task_image_path.unlink()
+        await db.delete_task(task_id)
+        raise HTTPException(status_code=500, detail=f"Failed to save solution image: {str(e)}")
+    
+    return {
+        "id": task_id,
+        "image_path": convert_to_relative_path(str(task_image_path), "/images"),
+        "correct_option": correct_option.upper() if answer_type == "quiz" else correct_option,
+        "answer_type": answer_type,
+        "solution_image_path": convert_to_relative_path(str(solution_image_path), "/solutions"),
+        "message": "Task created successfully"
+    }
+
+
+@app.put("/api/admin/tasks/{task_id}")
+async def admin_update_task(
+    task_id: int,
+    task_image: UploadFile = File(None),
+    solution_image: UploadFile = File(None),
+    correct_option: str = Form(None),
+    answer_type: str = Form(None),
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Update an existing task (admin only)"""
+    verify_admin_email(email)
+    
+    task = await db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Use absolute paths for file storage
+    base_dir = Path(__file__).parent.absolute()
+    images_dir = base_dir / "images"
+    solutions_dir = base_dir / "solutions"
+    
+    # Update correct_option if provided
+    if correct_option is not None:
+        effective_answer_type = answer_type if answer_type else task.get("answer_type", "quiz")
+        if effective_answer_type == "quiz" and correct_option.upper() not in ["A", "B", "C", "D"]:
+            raise HTTPException(status_code=400, detail="Quiz answer must be A, B, C, or D")
+        await db.update_task_correct_option(
+            task_id, 
+            correct_option.upper() if effective_answer_type == "quiz" else correct_option
+        )
+    
+    # Update task image if provided
+    if task_image:
+        task_image_path = images_dir / f"task_{task_id}.jpg"
+        try:
+            content = await task_image.read()
+            async with aiofiles.open(task_image_path, "wb") as f:
+                await f.write(content)
+            await db.update_task_image_path(task_id, str(task_image_path))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save task image: {str(e)}")
+    
+    # Update solution image if provided
+    if solution_image:
+        solution_image_path = solutions_dir / f"solution_{task_id}.jpg"
+        try:
+            content = await solution_image.read()
+            async with aiofiles.open(solution_image_path, "wb") as f:
+                await f.write(content)
+            await db.update_task_solution_image_path(task_id, str(solution_image_path))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save solution image: {str(e)}")
+    
+    # Get updated task
+    updated_task = await db.get_task(task_id)
+    
+    return {
+        "id": updated_task["id"],
+        "image_path": convert_to_relative_path(updated_task["image_path"], "/images"),
+        "correct_option": updated_task["correct_option"],
+        "answer_type": updated_task.get("answer_type", "quiz"),
+        "solution_image_path": convert_to_relative_path(updated_task.get("solution_image_path"), "/solutions"),
+        "message": "Task updated successfully"
+    }
+
+
+@app.delete("/api/admin/tasks/{task_id}")
+async def admin_delete_task(
+    task_id: int,
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Delete a task (admin only)"""
+    verify_admin_email(email)
+    
+    task = await db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Delete image files
+    if task["image_path"] and Path(task["image_path"]).exists():
+        Path(task["image_path"]).unlink(missing_ok=True)
+    if task.get("solution_image_path") and Path(task["solution_image_path"]).exists():
+        Path(task["solution_image_path"]).unlink(missing_ok=True)
+    
+    # Delete from database
+    await db.delete_task(task_id)
+    
+    return {"message": f"Task {task_id} deleted successfully"}
+
+
+@app.get("/api/admin/verify")
+async def admin_verify(email: str = Header(None, alias="X-Admin-Email")):
+    """Verify if the user is an admin"""
+    if not email or email not in ADMIN_EMAILS:
+        return {"is_admin": False}
+    return {"is_admin": True, "email": email}
+
 
 # ========== НАСТРОЙКИ ==========
 TOKEN = os.getenv("BOT_TOKEN")
