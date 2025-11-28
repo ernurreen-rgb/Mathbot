@@ -358,14 +358,12 @@ async def get_bot_statistics() -> Dict[str, int]:
 
 # ==================== ЛИГА ЖҮЙЕСІ ====================
 
-# Лига деңгейлері (5 деңгей, мини-топтармен)
-LEAGUES = ["bronze", "silver", "gold", "platinum", "diamond"]
+# Лига деңгейлері (3 деңгей, мини-топтармен)
+LEAGUES = ["bronze", "silver", "gold"]
 LEAGUE_NAMES = {
-    "bronze": "🪨 Қола",
+    "bronze": "🥉 Қола",
     "silver": "🥈 Күміс", 
-    "gold": "🥇 Алтын",
-    "platinum": "💎 Платина",
-    "diamond": "💠 Алмас"
+    "gold": "🥇 Алтын"
 }
 
 # Лигаға көтерілу/түсу үшін қажетті орын
