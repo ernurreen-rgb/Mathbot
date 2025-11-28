@@ -115,14 +115,13 @@ export default function RatingPage() {
                 let displayName = '';
                 let subtitle = '';
                 if (user.source === 'telegram') {
-                  displayName = user.username || user.full_name || `User ${user.user_id}`;
-                  if (user.username && user.full_name) {
-                    subtitle = `@${user.username}`;
-                  }
-                } else {
-                  displayName = user.nickname || user.name || 'Web User';
-                  // Don't show email to protect user privacy
-                }
+                  displayName = user.full_name || user.username || `User ${user.user_id}`;
+                }
+
+                else {
+                  displayName = user.nickname || user.name || 'Web User';
+                  // Don't show email to protect user privacy
+                }
                 
                 return (
                   <div

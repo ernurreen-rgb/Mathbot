@@ -56,9 +56,7 @@ export default function LeaguesPage() {
       setLeagues([
         { id: "bronze", name: "🥉 Қола" },
         { id: "silver", name: "🥈 Күміс" },
-        { id: "gold", name: "🥇 Алтын" },
-        { id: "platinum", name: "💎 Платина" },
-        { id: "diamond", name: "👑 Алмас" }
+        { id: "gold", name: "🥇 Алтын" }
       ]);
     }
   };
@@ -122,9 +120,7 @@ export default function LeaguesPage() {
     const emojis: Record<string, string> = {
       bronze: "🥉",
       silver: "🥈",
-      gold: "🥇",
-      platinum: "💎",
-      diamond: "👑"
+      gold: "🥇"
     };
     return emojis[leagueId] || "🏆";
   };
@@ -133,9 +129,7 @@ export default function LeaguesPage() {
     const colors: Record<string, string> = {
       bronze: "bg-gradient-to-br from-orange-100 to-amber-50",
       silver: "bg-gradient-to-br from-gray-100 to-slate-50",
-      gold: "bg-gradient-to-br from-yellow-100 to-amber-50",
-      platinum: "bg-gradient-to-br from-cyan-100 to-blue-50",
-      diamond: "bg-gradient-to-br from-purple-100 to-pink-50"
+      gold: "bg-gradient-to-br from-yellow-100 to-amber-50"
     };
     return colors[leagueId] || colors.bronze;
   };
@@ -152,7 +146,7 @@ export default function LeaguesPage() {
 
   const getDisplayName = (user: User) => {
     if (user.source === 'telegram') {
-      return user.username || user.full_name || `User ${user.user_id}`;
+      return user.full_name || user.username || `User ${user.user_id}`;
     }
     return user.nickname || user.name || 'Web User';
   };
@@ -160,7 +154,7 @@ export default function LeaguesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Main container with safe padding */}
-      <div className="w-4/5 mx-auto px-4 py-6 pb-20">
+      <div className="w-full mx-auto px-4 py-6 pb-20">
         
         {/* Header */}
         <div className="text-center mb-6">
@@ -168,9 +162,9 @@ export default function LeaguesPage() {
           <p className="text-sm text-gray-500 mt-1">Апталық жарыс</p>
         </div>
 
-        {/* League Selector - Horizontal scroll */}
+        {/* League Selector - No horizontal scroll */}
         <div className="mb-5">
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-2 **pl-4 pr-4** scrollbar-hide">
+          <div className="flex gap-2 justify-center pb-2">
             {leagues.map((league) => (
               <button
                 key={league.id}
