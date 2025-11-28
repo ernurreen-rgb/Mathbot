@@ -1,6 +1,7 @@
 // web/app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "EsepBot – Қазақстандық математика платформасы",
@@ -15,15 +16,17 @@ export default function RootLayout({
   return (
     <html lang="kk">
       <body className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 font-sans">
-        {/* Негізгі контент */}
-        <main className="flex flex-col items-center justify-center min-h-screen px-4">
-          {children}
-        </main>
+        <Providers>
+          {/* Негізгі контент */}
+          <main className="flex flex-col items-center justify-center min-h-screen px-4">
+            {children}
+          </main>
 
-        {/* Төменгі колонтитул */}
-        <footer className="absolute bottom-4 text-center text-gray-500 text-sm">
-          © 2025 EsepBot – Қазақстандық олимпиадалық математика платформасы
-        </footer>
+          {/* Төменгі колонтитул */}
+          <footer className="absolute bottom-4 text-center text-gray-500 text-sm">
+            © 2025 EsepBot – Қазақстандық олимпиадалық математика платформасы
+          </footer>
+        </Providers>
       </body>
     </html>
   );

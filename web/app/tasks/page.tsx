@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface Task {
   id: number;
@@ -18,6 +19,7 @@ interface CheckResult {
 }
 
 export default function TasksPage() {
+  const { data: session } = useSession();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,10 @@ export default function TasksPage() {
     setShowSolution(false);
     setUserAnswer("");
     try {
-      const url = `${apiUrl}/api/task/random`;
+      const email = session?.user?.email || "";
+      const url = email
+        ? `${apiUrl}/api/task/random?email=${encodeURIComponent(email)}`
+        : `${apiUrl}/api/task/random`;
       const res = await fetch(url);
       if (!res.ok) {
         if (res.status === 404) {
@@ -64,6 +69,7 @@ export default function TasksPage() {
     if (!task) return;
     
     try {
+      const email = session?.user?.email || "";
       const res = await fetch(`${apiUrl}/api/task/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,7 +77,7 @@ export default function TasksPage() {
           task_id: task.id,
           answer: answer,
           user_id: 0,
-          email: ""
+          email: email
         })
       });
       
