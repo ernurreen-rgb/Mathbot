@@ -105,6 +105,7 @@ async def check_answer(submission: AnswerSubmission):
     correct_answer = task["correct_option"].strip().lower().replace(',', '.')
     
     is_correct = user_answer == correct_answer
+    newly_unlocked_achievements = []
     
     # Update progress for web users
     if submission.email:
@@ -115,13 +116,16 @@ async def check_answer(submission: AnswerSubmission):
             # Check if already solved
             if not await db.has_web_solved(submission.email, submission.task_id):
                 await db.mark_web_solved_and_add_point(submission.email, submission.task_id)
+                # Check for new achievements
+                newly_unlocked_achievements = await db.check_and_unlock_achievements(submission.email)
         else:
             await db.mark_web_attempted(submission.email, submission.task_id)
     
     return {
         "correct": is_correct,
         "correct_answer": task["correct_option"] if not is_correct else None,
-        "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions")
+        "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
+        "newly_unlocked_achievements": newly_unlocked_achievements
     }
 
 @app.post("/api/user/web")
@@ -184,6 +188,22 @@ async def get_all_leagues():
             {"id": league, "name": db.LEAGUE_NAMES.get(league, league)}
             for league in db.LEAGUES
         ]
+    }
+
+@app.get("/api/user/web/{email}/achievements")
+async def get_web_user_achievements(email: str):
+    """Get web user achievements"""
+    achievements = await db.get_user_achievements(email)
+    return {"achievements": achievements}
+
+@app.post("/api/user/web/{email}/achievements/check")
+async def check_achievements(email: str):
+    """Check and unlock any new achievements for user"""
+    newly_unlocked = await db.check_and_unlock_achievements(email)
+    achievements = await db.get_user_achievements(email)
+    return {
+        "newly_unlocked": newly_unlocked,
+        "achievements": achievements
     }
 
 def validate_and_get_file_path(filename: str, base_dir: Path) -> Path:

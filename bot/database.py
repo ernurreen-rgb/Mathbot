@@ -71,6 +71,13 @@ async def init_db() -> None:
                 attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (email, task_id)
             );
+
+            CREATE TABLE IF NOT EXISTS web_user_achievements (
+                email TEXT,
+                achievement_id TEXT,
+                unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (email, achievement_id)
+            );
         """)
 
         # Индекстер – жылдамдық үшін өте маңызды!
@@ -82,6 +89,7 @@ async def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_wus_email ON web_user_solutions(email);
             CREATE INDEX IF NOT EXISTS idx_wus_task ON web_user_solutions(task_id);
             CREATE INDEX IF NOT EXISTS idx_league_groups ON league_groups(league, week_start);
+            CREATE INDEX IF NOT EXISTS idx_wua_email ON web_user_achievements(email);
         """)
 
         # Миграциялар (ескі базаларға)
@@ -710,3 +718,162 @@ async def reset_weekly_points() -> None:
         await conn.execute("UPDATE users SET weekly_points = 0, league_group_id = NULL")
         await conn.execute("UPDATE web_users SET weekly_points = 0, league_group_id = NULL")
         await conn.commit()
+
+
+# ==================== ЖЕТІСТІКТЕР (ACHIEVEMENTS) ====================
+
+# Жетістіктер анықтамасы
+ACHIEVEMENTS = {
+    # Есеп шешу жетістіктері
+    "first_solve": {
+        "id": "first_solve",
+        "name": "🌟 Бірінші қадам",
+        "description": "Алғашқы есепті шеш",
+        "icon": "🌟",
+        "requirement": {"type": "solved_count", "value": 1}
+    },
+    "solver_10": {
+        "id": "solver_10",
+        "name": "🔢 Математик",
+        "description": "10 есеп шеш",
+        "icon": "🔢",
+        "requirement": {"type": "solved_count", "value": 10}
+    },
+    "solver_50": {
+        "id": "solver_50",
+        "name": "📚 Білгір",
+        "description": "50 есеп шеш",
+        "icon": "📚",
+        "requirement": {"type": "solved_count", "value": 50}
+    },
+    "solver_100": {
+        "id": "solver_100",
+        "name": "🎓 Ұстаз",
+        "description": "100 есеп шеш",
+        "icon": "🎓",
+        "requirement": {"type": "solved_count", "value": 100}
+    },
+    "solver_500": {
+        "id": "solver_500",
+        "name": "🏆 Чемпион",
+        "description": "500 есеп шеш",
+        "icon": "🏆",
+        "requirement": {"type": "solved_count", "value": 500}
+    },
+    
+    # Ұпай жетістіктері
+    "points_25": {
+        "id": "points_25",
+        "name": "⚡ Жылдам бастама",
+        "description": "25 ұпай жина",
+        "icon": "⚡",
+        "requirement": {"type": "points", "value": 25}
+    },
+    "points_100": {
+        "id": "points_100",
+        "name": "💎 Жүз ұпай",
+        "description": "100 ұпай жина",
+        "icon": "💎",
+        "requirement": {"type": "points", "value": 100}
+    },
+    "points_500": {
+        "id": "points_500",
+        "name": "👑 Патша",
+        "description": "500 ұпай жина",
+        "icon": "👑",
+        "requirement": {"type": "points", "value": 500}
+    },
+    
+    # Лига жетістіктері
+    "league_silver": {
+        "id": "league_silver",
+        "name": "🥈 Күміс лига",
+        "description": "Күміс лигаға көтеріл",
+        "icon": "🥈",
+        "requirement": {"type": "league", "value": "silver"}
+    },
+    "league_gold": {
+        "id": "league_gold",
+        "name": "🥇 Алтын лига",
+        "description": "Алтын лигаға көтеріл",
+        "icon": "🥇",
+        "requirement": {"type": "league", "value": "gold"}
+    },
+}
+
+
+async def get_user_achievements(email: str) -> List[Dict[str, Any]]:
+    """Қолданушының барлық жетістіктерін алу"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        async with conn.execute(
+            "SELECT achievement_id, unlocked_at FROM web_user_achievements WHERE email = ?",
+            (email,)
+        ) as cur:
+            unlocked = {row['achievement_id']: row['unlocked_at'] for row in await cur.fetchall()}
+    
+    # Барлық жетістіктерді қайтару (ашылғандар мен ашылмағандар)
+    result = []
+    for ach_id, ach in ACHIEVEMENTS.items():
+        result.append({
+            **ach,
+            "unlocked": ach_id in unlocked,
+            "unlocked_at": unlocked.get(ach_id)
+        })
+    return result
+
+
+async def unlock_achievement(email: str, achievement_id: str) -> bool:
+    """Жетістікті ашу (егер бұрын ашылмаған болса)"""
+    if achievement_id not in ACHIEVEMENTS:
+        return False
+    
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        try:
+            await conn.execute(
+                "INSERT OR IGNORE INTO web_user_achievements (email, achievement_id) VALUES (?, ?)",
+                (email, achievement_id)
+            )
+            await conn.commit()
+            return True
+        except Exception:
+            return False
+
+
+async def check_and_unlock_achievements(email: str) -> List[str]:
+    """Қолданушының статистикасына сәйкес жетістіктерді тексеру және ашу"""
+    # Қолданушы статистикасын алу
+    stats = await get_web_user_stats(email)
+    if not stats:
+        return []
+    
+    # Ашылған жетістіктерді алу
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        async with conn.execute(
+            "SELECT achievement_id FROM web_user_achievements WHERE email = ?",
+            (email,)
+        ) as cur:
+            already_unlocked = {row['achievement_id'] for row in await cur.fetchall()}
+    
+    newly_unlocked = []
+    
+    for ach_id, ach in ACHIEVEMENTS.items():
+        if ach_id in already_unlocked:
+            continue
+        
+        req = ach["requirement"]
+        should_unlock = False
+        
+        if req["type"] == "solved_count":
+            should_unlock = stats.get("solved_count", 0) >= req["value"]
+        elif req["type"] == "points":
+            should_unlock = stats.get("points", 0) >= req["value"]
+        elif req["type"] == "league":
+            should_unlock = stats.get("league") == req["value"]
+        
+        if should_unlock:
+            if await unlock_achievement(email, ach_id):
+                newly_unlocked.append(ach_id)
+    
+    return newly_unlocked
