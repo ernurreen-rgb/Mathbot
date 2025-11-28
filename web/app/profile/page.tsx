@@ -1,7 +1,7 @@
 // web/app/profile/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 
 interface UserStats {
@@ -36,22 +36,22 @@ const leagueColors: Record<string, string> = {
   gold: "from-yellow-400 to-amber-500",
 };
 
+// Level thresholds defined once outside the function to avoid recreation
+const LEVEL_THRESHOLDS = [0, 10, 25, 50, 100, 200, 350, 550, 800, 1100, 1500, 2000, 2600, 3300, 4100, 5000] as const;
+
 // Calculate user level based on points
 function calculateLevel(points: number): { level: number; progress: number; nextLevelPoints: number } {
-  // Each level requires more points: level 1 = 0, level 2 = 10, level 3 = 25, level 4 = 50, etc.
-  const levelThresholds = [0, 10, 25, 50, 100, 200, 350, 550, 800, 1100, 1500, 2000, 2600, 3300, 4100, 5000];
-  
   let level = 1;
-  for (let i = 1; i < levelThresholds.length; i++) {
-    if (points >= levelThresholds[i]) {
+  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+    if (points >= LEVEL_THRESHOLDS[i]) {
       level = i + 1;
     } else {
       break;
     }
   }
   
-  const currentThreshold = levelThresholds[level - 1] || 0;
-  const nextThreshold = levelThresholds[level] || levelThresholds[levelThresholds.length - 1] + 1000;
+  const currentThreshold = LEVEL_THRESHOLDS[level - 1] || 0;
+  const nextThreshold = LEVEL_THRESHOLDS[level] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] + 1000;
   const progress = ((points - currentThreshold) / (nextThreshold - currentThreshold)) * 100;
   
   return { level, progress: Math.min(progress, 100), nextLevelPoints: nextThreshold };
@@ -201,8 +201,17 @@ export default function ProfilePage() {
     );
   }
 
-  const levelInfo = stats ? calculateLevel(stats.points) : { level: 1, progress: 0, nextLevelPoints: 10 };
-  const unlockedCount = achievements.filter(a => a.unlocked).length;
+  // Memoize level calculation to avoid recalculating on every render
+  const levelInfo = useMemo(() => 
+    stats ? calculateLevel(stats.points) : { level: 1, progress: 0, nextLevelPoints: 10 },
+    [stats?.points]
+  );
+  
+  // Memoize unlocked count to avoid recalculating on every render
+  const unlockedCount = useMemo(() => 
+    achievements.filter(a => a.unlocked).length,
+    [achievements]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-8 px-4">
