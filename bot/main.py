@@ -59,8 +59,13 @@ class AdminTaskUpdate(BaseModel):
     correct_option: str = None
     answer_type: str = None
 
-# Admin emails that have access to admin panel
-ADMIN_EMAILS = {"ernurreen0408@gmail.com"}
+# Valid quiz options constant
+VALID_QUIZ_OPTIONS = ["A", "B", "C", "D"]
+
+# Admin emails that have access to admin panel (can be configured via environment variable)
+# Format: comma-separated list of emails, e.g., "admin1@gmail.com,admin2@gmail.com"
+_admin_emails_env = os.getenv("ADMIN_EMAILS", "ernurreen0408@gmail.com")
+ADMIN_EMAILS = {email.strip() for email in _admin_emails_env.split(",") if email.strip()}
 
 def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> Optional[str]:
     """Convert an absolute file path to a relative URL path.
@@ -339,8 +344,8 @@ async def admin_create_task(
         raise HTTPException(status_code=400, detail="Invalid answer type. Must be 'quiz' or 'text'")
     
     # Validate quiz answer
-    if answer_type == "quiz" and correct_option.upper() not in ["A", "B", "C", "D"]:
-        raise HTTPException(status_code=400, detail="Quiz answer must be A, B, C, or D")
+    if answer_type == "quiz" and correct_option.upper() not in VALID_QUIZ_OPTIONS:
+        raise HTTPException(status_code=400, detail=f"Quiz answer must be one of: {', '.join(VALID_QUIZ_OPTIONS)}")
     
     # Create the task first to get the ID
     task_id = await db.add_task(
@@ -417,8 +422,8 @@ async def admin_update_task(
     # Update correct_option if provided
     if correct_option is not None:
         effective_answer_type = answer_type if answer_type else task.get("answer_type", "quiz")
-        if effective_answer_type == "quiz" and correct_option.upper() not in ["A", "B", "C", "D"]:
-            raise HTTPException(status_code=400, detail="Quiz answer must be A, B, C, or D")
+        if effective_answer_type == "quiz" and correct_option.upper() not in VALID_QUIZ_OPTIONS:
+            raise HTTPException(status_code=400, detail=f"Quiz answer must be one of: {', '.join(VALID_QUIZ_OPTIONS)}")
         await db.update_task_correct_option(
             task_id, 
             correct_option.upper() if effective_answer_type == "quiz" else correct_option
