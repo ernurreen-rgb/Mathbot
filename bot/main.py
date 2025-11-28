@@ -274,7 +274,8 @@ class RegisterUserMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
-def get_dir_size(path: Path) -> float:
+def _sync_get_dir_size(path: Path) -> float:
+    """Synchronous helper to calculate directory size."""
     total_size = 0
     try:
         for dirpath, dirnames, filenames in os.walk(path):
@@ -284,6 +285,11 @@ def get_dir_size(path: Path) -> float:
     except Exception:
         return 0.0
     return round(total_size / (1024 * 1024), 2)
+
+
+async def get_dir_size(path: Path) -> float:
+    """Calculate directory size asynchronously to avoid blocking the event loop."""
+    return await asyncio.to_thread(_sync_get_dir_size, path)
 
 
 # ========== FSM СОСТОЯНИЯ ==========
@@ -652,7 +658,12 @@ async def process_task_solution_final(message: Message, state: FSMContext, bot: 
 @dp.message(Command("stats"), IsAdminFilter())
 async def cmd_stats(message: Message):
     stats = await db.get_bot_statistics()
-    size = round(get_dir_size(IMAGES_DIR) + get_dir_size(SOLUTIONS_DIR), 2)
+    # Calculate sizes concurrently
+    images_size, solutions_size = await asyncio.gather(
+        get_dir_size(IMAGES_DIR),
+        get_dir_size(SOLUTIONS_DIR)
+    )
+    size = round(images_size + solutions_size, 2)
     text = f"📊 **Статистика:**\n👥 Қолданушы: {stats['total_users']}\n🧩 Есептер: {stats['total_tasks']}\n💾 Орын: {size} MB"
     await message.answer(text, parse_mode="Markdown")
 
