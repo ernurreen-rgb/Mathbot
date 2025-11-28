@@ -167,13 +167,18 @@ async def ensure_web_user(email: str, name: str, google_id: str) -> None:
         await conn.commit()
 
 
+async def _fetch_web_user_stats(conn: aiosqlite.Connection, email: str) -> Optional[Dict[str, Any]]:
+    """Internal helper to fetch web user stats using an existing connection."""
+    async with conn.execute("SELECT * FROM web_users WHERE email = ?", (email,)) as cur:
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
 async def get_web_user_stats(email: str) -> Optional[Dict[str, Any]]:
     """Веб қолданушының статистикасын алу"""
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
-        async with conn.execute("SELECT * FROM web_users WHERE email = ?", (email,)) as cur:
-            row = await cur.fetchone()
-            return dict(row) if row else None
+        return await _fetch_web_user_stats(conn, email)
 
 
 async def update_web_user_nickname(email: str, nickname: str) -> None:
@@ -881,14 +886,10 @@ async def check_and_unlock_achievements(email: str) -> List[str]:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         
-        # Fetch user stats and already unlocked achievements in a single connection
-        async with conn.execute(
-            "SELECT * FROM web_users WHERE email = ?", (email,)
-        ) as cur:
-            stats_row = await cur.fetchone()
-            if not stats_row:
-                return []
-            stats = dict(stats_row)
+        # Fetch user stats using shared helper (reuses query logic)
+        stats = await _fetch_web_user_stats(conn, email)
+        if not stats:
+            return []
         
         async with conn.execute(
             "SELECT achievement_id FROM web_user_achievements WHERE email = ?",
