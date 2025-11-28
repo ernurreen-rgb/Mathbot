@@ -836,7 +836,7 @@ async def unlock_achievement(email: str, achievement_id: str) -> bool:
             )
             await conn.commit()
             return True
-        except Exception:
+        except aiosqlite.Error:
             return False
 
 

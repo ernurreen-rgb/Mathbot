@@ -57,6 +57,17 @@ function calculateLevel(points: number): { level: number; progress: number; next
   return { level, progress: Math.min(progress, 100), nextLevelPoints: nextThreshold };
 }
 
+// Extract short name from achievement (removes emoji prefix if present)
+function getAchievementShortName(name: string): string {
+  if (!name) return "";
+  // Split by space and take all parts after the first (emoji) if there are multiple parts
+  const parts = name.split(" ");
+  if (parts.length > 1) {
+    return parts.slice(1).join(" ");
+  }
+  return name;
+}
+
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -373,7 +384,7 @@ export default function ProfilePage() {
                   title={achievement.description}
                 >
                   <div className="text-3xl mb-1">{achievement.icon}</div>
-                  <p className="text-xs text-white font-medium truncate">{achievement.name.replace(/^[^\s]+\s/, '')}</p>
+                  <p className="text-xs text-white font-medium truncate">{getAchievementShortName(achievement.name)}</p>
                   {achievement.unlocked && (
                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-xs">✓</span>
