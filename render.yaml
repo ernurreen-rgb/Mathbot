@@ -11,6 +11,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: ADMIN_EMAILS
+        sync: false  # Set admin emails (comma-separated) in Render dashboard
     # Add your Telegram bot token as an environment variable in Render dashboard
     # - key: BOT_TOKEN
     #   sync: false
