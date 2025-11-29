@@ -66,7 +66,7 @@ VALID_QUIZ_OPTIONS = ["A", "B", "C", "D"]
 # Admin emails that have access to admin panel (can be configured via environment variable)
 # Format: comma-separated list of emails, e.g., "ernurreen@gmail.com"
 _admin_emails_env = os.getenv("ADMIN_EMAILS", "ernurreen@gmail.com")
-ADMIN_EMAILS = {email.strip() for email in _admin_emails_env.split(",") if email.strip()}
+ADMIN_EMAILS = {email.strip().lower() for email in _admin_emails_env.split(",") if email.strip()}
 
 def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> Optional[str]:
     """Convert an absolute file path to a relative URL path.
@@ -261,7 +261,7 @@ async def serve_solution(filename: str):
 
 def verify_admin_email(email: str = Header(None, alias="X-Admin-Email")) -> str:
     """Verify that the request is from an admin user"""
-    if not email or email not in ADMIN_EMAILS:
+    if not email or email.lower() not in ADMIN_EMAILS:
         raise HTTPException(status_code=403, detail="Admin access required")
     return email
 
@@ -492,7 +492,9 @@ async def admin_delete_task(
 @app.get("/api/admin/verify")
 async def admin_verify(email: str = Header(None, alias="X-Admin-Email")):
     """Verify if the user is an admin"""
-    if not email or email not in ADMIN_EMAILS:
+    if not email or email.lower() not in ADMIN_EMAILS:
+        # Debug logging for troubleshooting (check server console)
+        print(f"Admin verify failed - Email: '{email}', Normalized: '{email.lower() if email else None}', Admin emails: {ADMIN_EMAILS}")
         return {"is_admin": False}
     return {"is_admin": True, "email": email}
 

@@ -50,6 +50,10 @@ export default function AdminPage() {
       });
       const data = await res.json();
       setIsAdmin(data.is_admin);
+      // Debug logging (check browser console)
+      if (!data.is_admin) {
+        console.log("Admin verify failed - Your email:", session.user.email);
+      }
     } catch {
       setIsAdmin(false);
     }
