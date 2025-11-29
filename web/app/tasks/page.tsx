@@ -19,7 +19,7 @@ interface CheckResult {
 }
 
 export default function TasksPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,9 +30,13 @@ export default function TasksPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   useEffect(() => {
-    fetchRandomTask();
+    // Wait for session to be loaded before fetching tasks
+    // This ensures we have the correct email to filter solved tasks
+    if (status !== "loading") {
+      fetchRandomTask();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [status]);
 
   const fetchRandomTask = async () => {
     setLoading(true);
