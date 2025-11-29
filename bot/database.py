@@ -255,6 +255,14 @@ async def list_tasks(limit: int = 200) -> List[Dict[str, Any]]:
             return [dict(row) for row in await cur.fetchall()]
 
 
+async def get_all_tasks_for_export() -> List[Dict[str, Any]]:
+    """Get all tasks with full data for export/backup purposes"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        async with conn.execute("SELECT * FROM tasks ORDER BY id ASC") as cur:
+            return [dict(row) for row in await cur.fetchall()]
+
+
 async def get_random_unsolved_task(user_id: int) -> Optional[Dict[str, Any]]:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row

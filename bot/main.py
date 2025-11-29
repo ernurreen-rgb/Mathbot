@@ -489,6 +489,37 @@ async def admin_delete_task(
     return {"message": f"Task {task_id} deleted successfully"}
 
 
+@app.get("/api/admin/tasks/export")
+async def admin_export_tasks(email: str = Header(None, alias="X-Admin-Email")):
+    """Export all tasks as JSON for backup purposes (admin only)
+    
+    This endpoint exports task metadata. Images should be backed up separately.
+    """
+    verify_admin_email(email)
+    
+    tasks = await db.get_all_tasks_for_export()
+    
+    # Format tasks for export (exclude absolute paths, include relative paths)
+    export_data = []
+    for task in tasks:
+        export_data.append({
+            "id": task["id"],
+            "correct_option": task["correct_option"],
+            "answer_type": task.get("answer_type", "quiz"),
+            "image_filename": Path(task["image_path"]).name if task["image_path"] else None,
+            "solution_filename": Path(task["solution_image_path"]).name if task.get("solution_image_path") else None,
+            "created_at": task.get("created_at"),
+            "created_by": task.get("created_by"),
+        })
+    
+    return {
+        "export_version": "1.0",
+        "total_tasks": len(export_data),
+        "note": "Images are not included in this export. Download them separately from /images/ and /solutions/ endpoints.",
+        "tasks": export_data
+    }
+
+
 @app.get("/api/admin/verify")
 async def admin_verify(email: str = Header(None, alias="X-Admin-Email")):
     """Verify if the user is an admin"""
@@ -955,6 +986,52 @@ async def cmd_export(message: Message):
         writer.writerow(["ID", "Name", "Username", "Points", "Solved"])
         for u in users: writer.writerow([u['user_id'], u['full_name'], u['username'], u['points'], u['solved_count']])
     await message.answer_document(FSInputFile(file_name))
+    try:
+        os.remove(file_name)
+    except:
+        pass
+
+
+@dp.message(Command("exporttasks"), IsAdminFilter())
+async def cmd_export_tasks(message: Message):
+    """Есептерді экспорттау (бэкап үшін)"""
+    import json
+    
+    tasks = await db.get_all_tasks_for_export()
+    if not tasks:
+        await message.answer("Есептер жоқ.")
+        return
+    
+    # Create JSON export
+    export_data = {
+        "export_version": "1.0",
+        "total_tasks": len(tasks),
+        "note": "Суреттерді бөлек сақтаңыз! /images/ және /solutions/ қалталарындағы файлдарды көшіріңіз.",
+        "tasks": []
+    }
+    
+    for task in tasks:
+        export_data["tasks"].append({
+            "id": task["id"],
+            "correct_option": task["correct_option"],
+            "answer_type": task.get("answer_type", "quiz"),
+            "image_filename": Path(task["image_path"]).name if task["image_path"] else None,
+            "solution_filename": Path(task["solution_image_path"]).name if task.get("solution_image_path") else None,
+            "created_at": task.get("created_at"),
+            "created_by": task.get("created_by"),
+        })
+    
+    file_name = "tasks_backup.json"
+    with open(file_name, 'w', encoding='utf-8') as f:
+        json.dump(export_data, f, ensure_ascii=False, indent=2)
+    
+    await message.answer_document(
+        FSInputFile(file_name),
+        caption=f"📦 Экспорттау аяқталды!\n"
+                f"Есептер саны: {len(tasks)}\n\n"
+                f"⚠️ Маңызды: Суреттерді бөлек сақтауды ұмытпаңыз!\n"
+                f"images/ және solutions/ қалталарындағы файлдарды көшіріңіз."
+    )
     try:
         os.remove(file_name)
     except:

@@ -101,22 +101,99 @@ This project consists of two services:
    NODE_VERSION=18.17.0
    ```
 
+## ⚠️ IMPORTANT: Why Tasks Disappear on Redeploy?
+
+### The Problem
+
+Every time you deploy (push code to main branch) on Render, **all data is lost**:
+- SQLite database (`database.db`) — **deleted**
+- Task images (`bot/images/`, `bot/solutions/`) — **deleted**
+
+This happens because Render uses **ephemeral (temporary) storage** on the free tier. Each deploy creates a new container with a clean filesystem.
+
+### Solutions
+
+#### Option 1: Render Disk (Recommended for simplicity)
+
+Render Disk is persistent storage that survives deploys.
+
+1. **Go to mathbot-api service settings** in Render dashboard
+2. **Add a Disk**:
+   - Click "Add Disk"
+   - **Name**: mathbot-data
+   - **Mount Path**: `/data`
+   - **Size**: 1 GB (enough to start)
+3. **Add environment variables**:
+   ```
+   DATABASE_PATH=/data/database.db
+   IMAGES_PATH=/data/images
+   SOLUTIONS_PATH=/data/solutions
+   ```
+
+**Note**: Render Disk is only available on paid plans (from $7/month).
+
+#### Option 2: External PostgreSQL Database
+
+1. **Create PostgreSQL on Render**:
+   - Click "New" → "PostgreSQL"
+   - Choose free tier (90 days) or paid
+2. **Get DATABASE_URL** from database settings
+3. **Add environment variable** to mathbot-api:
+   ```
+   DATABASE_URL=postgres://user:password@host:port/database
+   ```
+
+**Note**: Code modification needed to support PostgreSQL.
+
+#### Option 3: Use Different Hosting
+
+Consider hosts with persistent storage:
+- **Railway.app** — has persistent storage
+- **Fly.io** — supports persistent volumes
+- **DigitalOcean App Platform** — with managed databases
+- **Your own VPS** (DigitalOcean, Hetzner, etc.)
+
+#### Option 4: Manual Backup Before Deploy
+
+If you continue using Render free tier:
+
+1. **Before each deploy** export data:
+   - In Telegram bot: `/export` — exports users
+   - Download images manually via SSH/SFTP
+   
+2. **After deploy** import data back
+
+**This is a temporary workaround and NOT recommended for production!**
+
+### Recommendation
+
+For stable bot operation with data persistence:
+
+| Component | Free Solution | Paid Solution |
+|-----------|---------------|---------------|
+| Database | PostgreSQL (Render, 90 days free) | Render PostgreSQL ($7+/mo) |
+| Images | Cloudinary (free tier) | AWS S3, Cloudinary Pro |
+| Hosting | Render Free | Render Starter ($7/mo) |
+
+---
+
 ## Important Notes
 
 ### Free Tier Limitations
 - Services on the free tier will spin down after 15 minutes of inactivity
 - First request after inactivity may take 30-60 seconds to wake up
 - Free tier includes 750 hours/month per service
+- **Data is NOT preserved between deploys!**
 
 ### Database Persistence
-- The SQLite database (`database.db`) will persist on Render's disk
-- **Important**: The database may be reset if the service is redeployed
-- For production, consider using a persistent database service
+- The SQLite database (`database.db`) is stored on ephemeral disk
+- **⚠️ Database is reset on every deploy!**
+- For production, you **must** use an external database service
 
 ### Images Storage
 - Images are stored in `bot/images/` and `bot/solutions/` directories
-- These will persist on Render's disk but may be lost on redeploy
-- For production, consider using cloud storage (S3, Cloudinary, etc.)
+- **⚠️ Images are deleted on every deploy!**
+- For production, you **must** use cloud storage (S3, Cloudinary, etc.)
 
 ### Custom Domain
 - You can add a custom domain in the Render dashboard
