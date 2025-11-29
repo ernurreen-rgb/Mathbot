@@ -1,5 +1,6 @@
 
 import asyncio
+import json
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command, StateFilter, BaseFilter
 from aiogram.types import (
@@ -79,6 +80,16 @@ def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> O
     # Remove leading slash from url_prefix to avoid double slashes in frontend
     prefix = url_prefix.lstrip('/')
     return f"{prefix}/{Path(absolute_path).name}"
+
+
+def extract_filename(path: Optional[str]) -> Optional[str]:
+    """Extract filename from a path string safely.
+    
+    Returns the filename part of the path, or None if path is empty/None.
+    """
+    if not path:
+        return None
+    return Path(path).name
 
 @app.get("/api/task/random")
 async def get_random_task(email: str = ""):
@@ -506,8 +517,8 @@ async def admin_export_tasks(email: str = Header(None, alias="X-Admin-Email")):
             "id": task["id"],
             "correct_option": task["correct_option"],
             "answer_type": task.get("answer_type", "quiz"),
-            "image_filename": Path(task["image_path"]).name if task["image_path"] else None,
-            "solution_filename": Path(task["solution_image_path"]).name if task.get("solution_image_path") else None,
+            "image_filename": extract_filename(task["image_path"]),
+            "solution_filename": extract_filename(task.get("solution_image_path")),
             "created_at": task.get("created_at"),
             "created_by": task.get("created_by"),
         })
@@ -995,8 +1006,6 @@ async def cmd_export(message: Message):
 @dp.message(Command("exporttasks"), IsAdminFilter())
 async def cmd_export_tasks(message: Message):
     """Есептерді экспорттау (бэкап үшін)"""
-    import json
-    
     tasks = await db.get_all_tasks_for_export()
     if not tasks:
         await message.answer("Есептер жоқ.")
@@ -1015,8 +1024,8 @@ async def cmd_export_tasks(message: Message):
             "id": task["id"],
             "correct_option": task["correct_option"],
             "answer_type": task.get("answer_type", "quiz"),
-            "image_filename": Path(task["image_path"]).name if task["image_path"] else None,
-            "solution_filename": Path(task["solution_image_path"]).name if task.get("solution_image_path") else None,
+            "image_filename": extract_filename(task["image_path"]),
+            "solution_filename": extract_filename(task.get("solution_image_path")),
             "created_at": task.get("created_at"),
             "created_by": task.get("created_by"),
         })
@@ -1034,7 +1043,7 @@ async def cmd_export_tasks(message: Message):
     )
     try:
         os.remove(file_name)
-    except:
+    except OSError:
         pass
 
 
