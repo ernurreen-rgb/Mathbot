@@ -111,6 +111,14 @@ Bot/API сервис предоставляет следующие endpoints:
 - `GET /images/{filename}` - Изображения задач
 - `GET /solutions/{filename}` - Изображения решений
 
+### Admin AI Solution Endpoints
+
+- `POST /api/admin/tasks/{task_id}/ai-solution` - Запросить AI решение (admin only)
+- `POST /api/admin/tasks/{task_id}/ai-solution/retry` - Повторить генерацию AI решения (admin only)
+- `POST /api/admin/tasks/{task_id}/ai-solution/approve` - Одобрить AI решение (admin only)
+- `POST /api/admin/tasks/{task_id}/ai-solution/reject` - Отклонить AI решение (admin only)
+- `GET /api/admin/tasks/{task_id}/ai-solution` - Получить статус AI решения (admin only)
+
 ## 🔐 Переменные окружения
 
 ### Bot/API Service
@@ -118,6 +126,8 @@ Bot/API сервис предоставляет следующие endpoints:
 ```env
 BOT_TOKEN=your_telegram_bot_token
 PORT=8000
+OPENAI_API_KEY=your_openai_api_key  # Для AI-решений (опционально)
+OPENAI_MODEL=gpt-4o-mini  # По умолчанию gpt-4o-mini (опционально)
 ```
 
 ### Web Service
