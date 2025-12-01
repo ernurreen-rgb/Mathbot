@@ -672,11 +672,7 @@ async def send_random_task_to_user(bot: Bot, chat_id: int, user_id: int, state: 
     
     # If task has text content, send it as a message
     if task_text:
-        caption = f"📝 **Есеп #{task['id']}**
-
-{task_text}
-
-"
+        caption = f"📝 **Есеп #{task['id']}**\n\n{task_text}\n\n"
         
         if answer_type == "text":
             caption += "✍️ Жауапты хабарламамен енгізіңіз (сан немесе мәтін)."
@@ -717,8 +713,7 @@ async def send_random_task_to_user(bot: Bot, chat_id: int, user_id: int, state: 
         if answer_type == "text":
             await bot.send_photo(
                 chat_id=chat_id, photo=input_file,
-                caption="✍️ **Бұл есеп қолмен енгізуді талап етеді.**
-Жауапты хабарламамен енгізіңіз (сан немесе мәтін).",
+                caption="✍️ **Бұл есеп қолмен енгізуді талап етеді.**\nЖауапты хабарламамен енгізіңіз (сан немесе мәтін).",
                 parse_mode="Markdown"
             )
             await state.update_data(current_task_id=task["id"])
