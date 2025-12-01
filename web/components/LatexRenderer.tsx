@@ -25,7 +25,8 @@ export default function LatexRenderer({ text, className = "" }: LatexRendererPro
           const hasDelimiters = text.includes("$");
           
           // Auto-detect bare LaTeX: if no $ delimiters but contains backslash and LaTeX commands
-          const isBareLatex = !hasDelimiters && /\\[a-zA-Z]+/.test(text);
+          // Match commands like \left, \right, single-char commands like \{, and other LaTeX patterns
+          const isBareLatex = !hasDelimiters && /\\[a-zA-Z*]+|\\[^a-zA-Z\\s]/.test(text);
           
           // If it's bare LaTeX from MathEditor, wrap it in $ delimiters
           const processedText = isBareLatex ? `$${text}$` : text;
