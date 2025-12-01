@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import LatexRenderer from "../../components/LatexRenderer";
 
 interface Task {
   id: number;
@@ -171,14 +172,7 @@ export default function TasksPage() {
           {task.task_text && (
             <div className="mb-6 p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
               <div className="prose max-w-none">
-                <div 
-                  className="text-lg whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{
-                    __html: task.task_text
-                      .replace(/\$\$(.*?)\$\$/g, '<span class="math-block">$$1$$</span>')
-                      .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
-                  }}
-                />
+                <LatexRenderer text={task.task_text} className="text-lg" />
               </div>
             </div>
           )}
@@ -265,14 +259,7 @@ export default function TasksPage() {
               {checkResult.solution_text && (
                 <div className="mb-4 p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
                   <div className="prose max-w-none">
-                    <div 
-                      className="text-lg whitespace-pre-wrap"
-                      dangerouslySetInnerHTML={{
-                        __html: checkResult.solution_text
-                          .replace(/\$\$(.*?)\$\$/g, '<span class="math-block">$$1$$</span>')
-                          .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
-                      }}
-                    />
+                    <LatexRenderer text={checkResult.solution_text} className="text-lg" />
                   </div>
                 </div>
               )}
