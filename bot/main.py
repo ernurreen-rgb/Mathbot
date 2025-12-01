@@ -17,6 +17,7 @@ import aiofiles
 import os
 import csv
 import database as db
+import ai_service
 
 # === FastAPI HTTP API ===
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Header
@@ -145,11 +146,19 @@ async def check_answer(submission: AnswerSubmission):
         else:
             await db.mark_web_attempted(submission.email, submission.task_id)
     
+    # Determine which solution to show
+    # Priority: AI solution (if approved) > manual solution_text > solution_image_path
+    solution_text = None
+    if task.get("ai_solution_status") == "approved" and task.get("ai_solution_text"):
+        solution_text = task.get("ai_solution_text")
+    elif task.get("solution_text"):
+        solution_text = task.get("solution_text")
+    
     return {
         "correct": is_correct,
         "correct_answer": task["correct_option"] if not is_correct else None,
         "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
-        "solution_text": task.get("solution_text"),  # LaTeX/text solution
+        "solution_text": solution_text,  # AI solution (if approved) or manual solution
         "newly_unlocked_achievements": newly_unlocked_achievements
     }
 
@@ -308,6 +317,9 @@ async def admin_get_all_tasks(
             "option_b_text": task.get("option_b_text"),
             "option_c_text": task.get("option_c_text"),
             "option_d_text": task.get("option_d_text"),
+            "ai_solution_text": task.get("ai_solution_text"),
+            "ai_solution_status": task.get("ai_solution_status", "none"),
+            "ai_solution_requested_at": task.get("ai_solution_requested_at"),
         })
     
     return {
@@ -345,6 +357,9 @@ async def admin_get_task(
         "option_b_text": task.get("option_b_text"),
         "option_c_text": task.get("option_c_text"),
         "option_d_text": task.get("option_d_text"),
+        "ai_solution_text": task.get("ai_solution_text"),
+        "ai_solution_status": task.get("ai_solution_status", "none"),
+        "ai_solution_requested_at": task.get("ai_solution_requested_at"),
     }
 
 
@@ -505,6 +520,137 @@ async def admin_verify(email: str = Header(None, alias="X-Admin-Email")):
         print(f"Admin verify failed - Email: '{email}', Normalized: '{email.lower() if email else None}', Admin emails: {ADMIN_EMAILS}")
         return {"is_admin": False}
     return {"is_admin": True, "email": email}
+
+
+# ========== AI SOLUTION API ==========
+
+@app.post("/api/admin/tasks/{task_id}/ai-solution")
+async def admin_request_ai_solution(
+    task_id: int,
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Request AI-generated solution for a task (admin only)"""
+    verify_admin_email(email)
+    
+    task = await db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    try:
+        # Generate AI solution
+        ai_solution = await ai_service.generate_ai_solution(task)
+        
+        # Save to database with pending status
+        await db.update_ai_solution(task_id, ai_solution, status='pending')
+        
+        return {
+            "task_id": task_id,
+            "ai_solution_text": ai_solution,
+            "ai_solution_status": "pending",
+            "message": "AI solution generated successfully. Please review and approve/reject."
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=f"AI configuration error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate AI solution: {str(e)}")
+
+
+@app.post("/api/admin/tasks/{task_id}/ai-solution/retry")
+async def admin_retry_ai_solution(
+    task_id: int,
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Retry AI solution generation (admin only)"""
+    verify_admin_email(email)
+    
+    task = await db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    try:
+        # Regenerate AI solution
+        ai_solution = await ai_service.generate_ai_solution(task)
+        
+        # Update in database with pending status
+        await db.update_ai_solution(task_id, ai_solution, status='pending')
+        
+        return {
+            "task_id": task_id,
+            "ai_solution_text": ai_solution,
+            "ai_solution_status": "pending",
+            "message": "AI solution regenerated successfully. Please review and approve/reject."
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=f"AI configuration error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to regenerate AI solution: {str(e)}")
+
+
+@app.post("/api/admin/tasks/{task_id}/ai-solution/approve")
+async def admin_approve_ai_solution(
+    task_id: int,
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Approve AI solution (admin only)"""
+    verify_admin_email(email)
+    
+    task = await db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Check if AI solution exists
+    if not task.get("ai_solution_text"):
+        raise HTTPException(status_code=400, detail="No AI solution to approve")
+    
+    await db.approve_ai_solution(task_id)
+    
+    return {
+        "task_id": task_id,
+        "ai_solution_status": "approved",
+        "message": "AI solution approved successfully"
+    }
+
+
+@app.post("/api/admin/tasks/{task_id}/ai-solution/reject")
+async def admin_reject_ai_solution(
+    task_id: int,
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Reject AI solution (admin only)"""
+    verify_admin_email(email)
+    
+    task = await db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    await db.reject_ai_solution(task_id)
+    
+    return {
+        "task_id": task_id,
+        "ai_solution_status": "rejected",
+        "message": "AI solution rejected"
+    }
+
+
+@app.get("/api/admin/tasks/{task_id}/ai-solution")
+async def admin_get_ai_solution(
+    task_id: int,
+    email: str = Header(None, alias="X-Admin-Email")
+):
+    """Get AI solution status for a task (admin only)"""
+    verify_admin_email(email)
+    
+    task = await db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {
+        "task_id": task_id,
+        "ai_solution_text": task.get("ai_solution_text"),
+        "ai_solution_status": task.get("ai_solution_status", "none"),
+        "ai_solution_requested_at": task.get("ai_solution_requested_at")
+    }
+
 
 
 # ========== НАСТРОЙКИ ==========
@@ -874,7 +1020,14 @@ async def handle_solution_request(call: CallbackQuery):
     task_id = int(call.data.split(":")[1])
     task = await db.get_task(task_id)
 
-    solution_text = task.get('solution_text')
+    # Determine which solution to show
+    # Priority: AI solution (if approved) > manual solution_text > solution_image_path
+    solution_text = None
+    if task.get("ai_solution_status") == "approved" and task.get("ai_solution_text"):
+        solution_text = task.get("ai_solution_text")
+    elif task.get('solution_text'):
+        solution_text = task.get('solution_text')
+    
     solution_path = task.get('solution_image_path')
     
     # Send text solution if available
