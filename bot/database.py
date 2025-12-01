@@ -338,10 +338,15 @@ async def update_solution_text(task_id: int, text: str) -> None:
 
 async def update_option_text(task_id: int, option: str, text: str) -> None:
     """Update quiz option text (LaTeX or plain text)"""
+    # Validate option to prevent SQL injection
+    if option not in ['a', 'b', 'c', 'd']:
+        raise ValueError(f"Invalid option: {option}. Must be one of: a, b, c, d")
+    
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         column = f"option_{option}_text"
         await conn.execute(f"UPDATE tasks SET {column} = ? WHERE id = ?", (text, task_id))
         await conn.commit()
+
 
 
 

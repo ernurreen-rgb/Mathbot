@@ -15,9 +15,11 @@ export default function MathEditor({ value, onChange, placeholder, className }: 
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let mounted = true;
+    
     // Dynamically import MathLive only on client side
     import("mathlive").then((MathLive) => {
-      if (containerRef.current && !mathFieldRef.current) {
+      if (mounted && containerRef.current && !mathFieldRef.current) {
         // Create math-field element
         const mf = new MathLive.MathfieldElement();
         
@@ -37,13 +39,21 @@ export default function MathEditor({ value, onChange, placeholder, className }: 
     });
 
     return () => {
-      // Cleanup
-      if (mathFieldRef.current && containerRef.current && containerRef.current.contains(mathFieldRef.current)) {
-        containerRef.current.removeChild(mathFieldRef.current);
+      mounted = false;
+      // Cleanup using remove() method which is safer for custom elements
+      if (mathFieldRef.current) {
+        try {
+          mathFieldRef.current.remove();
+        } catch (e) {
+          // Fallback to removeChild if remove() fails
+          if (containerRef.current && containerRef.current.contains(mathFieldRef.current)) {
+            containerRef.current.removeChild(mathFieldRef.current);
+          }
+        }
         mathFieldRef.current = null;
       }
     };
-  }, [onChange]);
+  }, []); // Empty dependency array - only run on mount/unmount
 
   // Update value when prop changes
   useEffect(() => {
