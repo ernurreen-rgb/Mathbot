@@ -408,8 +408,9 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
         if (solutionImage) formData.append("solution_image", solutionImage);
         if (correctOption) formData.append("correct_option", correctOption);
         if (answerType) formData.append("answer_type", answerType);
-        if (taskText !== undefined) formData.append("task_text", taskText);
-        if (solutionText !== undefined) formData.append("solution_text", solutionText);
+        // Always append text fields for updates (empty string is valid)
+        formData.append("task_text", taskText);
+        formData.append("solution_text", solutionText);
 
         const res = await fetch(`${apiUrl}/api/admin/tasks/${task.id}`, {
           method: "PUT",

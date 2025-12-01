@@ -917,7 +917,6 @@ async def handle_solution_request(call: CallbackQuery):
                 caption=f"**📝 Шешімі (ID {task_id})**" if not solution_text else None,
                 parse_mode="Markdown"
             )
-        return
     
     # No solution available
     if not solution_text and (not solution_path or not Path(solution_path).exists()):

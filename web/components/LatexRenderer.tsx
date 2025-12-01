@@ -23,7 +23,8 @@ export default function LatexRenderer({ text, className = "" }: LatexRendererPro
           container.innerHTML = "";
 
           // Split text by LaTeX delimiters
-          const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^\$]+?\$)/);
+          // Check for display math ($$) first, then inline math ($)
+          const parts = text.split(/(\$\$[\s\S]*?\$\$|\$(?!\$)[^\$]+?\$(?!\$))/);
           
           parts.forEach((part) => {
             if (part.startsWith("$$") && part.endsWith("$$")) {
@@ -41,8 +42,8 @@ export default function LatexRenderer({ text, className = "" }: LatexRendererPro
                 span.textContent = part;
                 container.appendChild(span);
               }
-            } else if (part.startsWith("$") && part.endsWith("$")) {
-              // Inline math
+            } else if (part.startsWith("$") && part.endsWith("$") && !part.startsWith("$$")) {
+              // Inline math (excluding display math)
               const math = part.slice(1, -1);
               const span = document.createElement("span");
               try {
