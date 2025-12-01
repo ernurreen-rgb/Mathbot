@@ -181,17 +181,6 @@ export default function TasksPage() {
             </div>
           )}
 
-          {/* Task Image (if provided) */}
-          {task.image_path && (
-            <div className="mb-8">
-              <img
-                src={`${apiUrl}/${task.image_path}`}
-                alt={`Есеп ${task.id}`}
-                className="w-full rounded-lg shadow-md"
-              />
-            </div>
-          )}
-
           {!checkResult && (
             <div className="mb-6">
               {task.answer_type === "quiz" ? (
@@ -280,15 +269,6 @@ export default function TasksPage() {
                     <LatexRenderer text={checkResult.solution_text} className="text-lg" />
                   </div>
                 </div>
-              )}
-              
-              {/* Solution Image */}
-              {checkResult.solution_image_path && (
-                <img
-                  src={`${apiUrl}/${checkResult.solution_image_path}`}
-                  alt="Шешімі"
-                  className="w-full rounded-lg shadow-md"
-                />
               )}
             </div>
           )}

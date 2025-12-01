@@ -350,8 +350,6 @@ async def admin_get_task(
 
 @app.post("/api/admin/tasks")
 async def admin_create_task(
-    task_image: UploadFile = File(None),
-    solution_image: UploadFile = File(None),
     correct_option: str = Form(...),
     answer_type: str = Form("quiz"),
     task_text: str = Form(""),
@@ -373,11 +371,11 @@ async def admin_create_task(
     if answer_type == "quiz" and correct_option.upper() not in VALID_QUIZ_OPTIONS:
         raise HTTPException(status_code=400, detail=f"Quiz answer must be one of: {', '.join(VALID_QUIZ_OPTIONS)}")
     
-    # Validate that either text or image is provided
-    if not task_text and not task_image:
-        raise HTTPException(status_code=400, detail="Either task_text or task_image must be provided")
+    # Validate that task text is provided
+    if not task_text:
+        raise HTTPException(status_code=400, detail="Task text is required")
     
-    # Create the task first to get the ID
+    # Create the task
     task_id = await db.add_task(
         image_path="",
         correct_option=correct_option.upper() if answer_type == "quiz" else correct_option,
@@ -392,48 +390,12 @@ async def admin_create_task(
         option_d_text=option_d_text
     )
     
-    # Use absolute paths for file storage
-    base_dir = Path(__file__).parent.absolute()
-    images_dir = base_dir / "images"
-    solutions_dir = base_dir / "solutions"
-    images_dir.mkdir(parents=True, exist_ok=True)
-    solutions_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Save task image if provided
-    task_image_path = None
-    if task_image:
-        task_image_path = images_dir / f"task_{task_id}.jpg"
-        try:
-            content = await task_image.read()
-            async with aiofiles.open(task_image_path, "wb") as f:
-                await f.write(content)
-            await db.update_task_image_path(task_id, str(task_image_path))
-        except Exception as e:
-            await db.delete_task(task_id)
-            raise HTTPException(status_code=500, detail=f"Failed to save task image: {str(e)}")
-    
-    # Save solution image if provided
-    solution_image_path = None
-    if solution_image:
-        solution_image_path = solutions_dir / f"solution_{task_id}.jpg"
-        try:
-            content = await solution_image.read()
-            async with aiofiles.open(solution_image_path, "wb") as f:
-                await f.write(content)
-            await db.update_task_solution_image_path(task_id, str(solution_image_path))
-        except Exception as e:
-            # Clean up task image if solution fails
-            if task_image_path and task_image_path.exists():
-                task_image_path.unlink()
-            await db.delete_task(task_id)
-            raise HTTPException(status_code=500, detail=f"Failed to save solution image: {str(e)}")
-    
     return {
         "id": task_id,
-        "image_path": convert_to_relative_path(str(task_image_path), "/images") if task_image_path else None,
+        "image_path": None,
         "correct_option": correct_option.upper() if answer_type == "quiz" else correct_option,
         "answer_type": answer_type,
-        "solution_image_path": convert_to_relative_path(str(solution_image_path), "/solutions") if solution_image_path else None,
+        "solution_image_path": None,
         "task_text": task_text,
         "solution_text": solution_text,
         "option_a_text": option_a_text,
@@ -447,8 +409,6 @@ async def admin_create_task(
 @app.put("/api/admin/tasks/{task_id}")
 async def admin_update_task(
     task_id: int,
-    task_image: UploadFile = File(None),
-    solution_image: UploadFile = File(None),
     correct_option: str = Form(None),
     answer_type: str = Form(None),
     task_text: str = Form(None),
@@ -466,11 +426,6 @@ async def admin_update_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    # Use absolute paths for file storage
-    base_dir = Path(__file__).parent.absolute()
-    images_dir = base_dir / "images"
-    solutions_dir = base_dir / "solutions"
-    
     # Update correct_option if provided
     if correct_option is not None:
         effective_answer_type = answer_type if answer_type else task.get("answer_type", "quiz")
@@ -480,28 +435,6 @@ async def admin_update_task(
             task_id, 
             correct_option.upper() if effective_answer_type == "quiz" else correct_option
         )
-    
-    # Update task image if provided
-    if task_image:
-        task_image_path = images_dir / f"task_{task_id}.jpg"
-        try:
-            content = await task_image.read()
-            async with aiofiles.open(task_image_path, "wb") as f:
-                await f.write(content)
-            await db.update_task_image_path(task_id, str(task_image_path))
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to save task image: {str(e)}")
-    
-    # Update solution image if provided
-    if solution_image:
-        solution_image_path = solutions_dir / f"solution_{task_id}.jpg"
-        try:
-            content = await solution_image.read()
-            async with aiofiles.open(solution_image_path, "wb") as f:
-                await f.write(content)
-            await db.update_task_solution_image_path(task_id, str(solution_image_path))
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to save solution image: {str(e)}")
     
     # Update task_text if provided
     if task_text is not None:

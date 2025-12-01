@@ -285,7 +285,7 @@ export default function AdminPage() {
                   <thead>
                     <tr className="border-b-2 border-gray-200">
                       <th className="text-left py-3 px-4">ID</th>
-                      <th className="text-left py-3 px-4">Сурет</th>
+                      <th className="text-left py-3 px-4">Есеп мәтіні</th>
                       <th className="text-left py-3 px-4">Түрі</th>
                       <th className="text-left py-3 px-4">Жауап</th>
                       <th className="text-left py-3 px-4">Әрекеттер</th>
@@ -296,11 +296,9 @@ export default function AdminPage() {
                       <tr key={task.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium">#{task.id}</td>
                         <td className="py-3 px-4">
-                          <img
-                            src={`${apiUrl}/${task.image_path}`}
-                            alt={`Есеп ${task.id}`}
-                            className="w-24 h-16 object-cover rounded-lg shadow"
-                          />
+                          <div className="max-w-md truncate text-gray-700">
+                            {task.task_text || "—"}
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded-full text-sm font-medium ${
@@ -379,8 +377,6 @@ interface TaskFormProps {
 function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskFormProps) {
   const [answerType, setAnswerType] = useState(task?.answer_type || "quiz");
   const [correctOption, setCorrectOption] = useState(task?.correct_option || "");
-  const [taskImage, setTaskImage] = useState<File | null>(null);
-  const [solutionImage, setSolutionImage] = useState<File | null>(null);
   const [taskText, setTaskText] = useState(task?.task_text || "");
   const [solutionText, setSolutionText] = useState(task?.solution_text || "");
   const [optionAText, setOptionAText] = useState(task?.option_a_text || "");
@@ -388,28 +384,6 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
   const [optionCText, setOptionCText] = useState(task?.option_c_text || "");
   const [optionDText, setOptionDText] = useState(task?.option_d_text || "");
   const [submitting, setSubmitting] = useState(false);
-  const [taskImagePreview, setTaskImagePreview] = useState<string | null>(
-    task?.image_path ? `${apiUrl}/${task.image_path}` : null
-  );
-  const [solutionImagePreview, setSolutionImagePreview] = useState<string | null>(
-    task?.solution_image_path ? `${apiUrl}/${task.solution_image_path}` : null
-  );
-
-  const handleTaskImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setTaskImage(file);
-      setTaskImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSolutionImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSolutionImage(file);
-      setSolutionImagePreview(URL.createObjectURL(file));
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -420,8 +394,6 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
       
       if (task) {
         // Update existing task
-        if (taskImage) formData.append("task_image", taskImage);
-        if (solutionImage) formData.append("solution_image", solutionImage);
         if (correctOption) formData.append("correct_option", correctOption);
         if (answerType) formData.append("answer_type", answerType);
         // Always append text fields for updates (empty string is valid)
@@ -446,15 +418,13 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
         }
       } else {
         // Create new task
-        if (!taskText && !taskImage) {
-          throw new Error("Есеп мәтінін немесе суретін жүктеңіз");
+        if (!taskText) {
+          throw new Error("Есеп мәтінін енгізіңіз");
         }
         if (!correctOption) {
           throw new Error("Дұрыс жауапты енгізіңіз");
         }
 
-        if (taskImage) formData.append("task_image", taskImage);
-        if (solutionImage) formData.append("solution_image", solutionImage);
         formData.append("correct_option", correctOption);
         formData.append("answer_type", answerType);
         formData.append("task_text", taskText);
@@ -643,28 +613,6 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
               </div>
             )}
 
-            {/* Task Image (Optional) */}
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Есеп суреті (міндетті емес)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleTaskImageChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-              {taskImagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={taskImagePreview}
-                    alt="Есеп"
-                    className="max-w-full max-h-48 rounded-lg shadow"
-                  />
-                </div>
-              )}
-            </div>
-
             {/* Solution Text (LaTeX/Plain text) */}
             <div>
               <label className="block text-gray-700 font-medium mb-2">
@@ -675,28 +623,6 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
                 onChange={setSolutionText}
                 placeholder="Шешімді енгізіңіз"
               />
-            </div>
-
-            {/* Solution Image (Optional) */}
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Шешім суреті (міндетті емес)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleSolutionImageChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-              {solutionImagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={solutionImagePreview}
-                    alt="Шешім"
-                    className="max-w-full max-h-48 rounded-lg shadow"
-                  />
-                </div>
-              )}
             </div>
 
             {/* Submit Buttons */}
