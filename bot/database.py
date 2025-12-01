@@ -48,12 +48,18 @@ async def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                image_path TEXT NOT NULL,
+                image_path TEXT,
                 correct_option TEXT NOT NULL,
                 solution_image_path TEXT,
                 answer_type TEXT DEFAULT 'quiz',
                 created_by INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                task_text TEXT,
+                solution_text TEXT,
+                option_a_text TEXT,
+                option_b_text TEXT,
+                option_c_text TEXT,
+                option_d_text TEXT
             );
 
             CREATE TABLE IF NOT EXISTS user_solutions (
@@ -94,19 +100,14 @@ async def init_db() -> None:
 
         # Миграциялар (ескі базаларға)
         migrations = [
-            "ALTER TABLE tasks ADD COLUMN solution_image_path TEXT",
-            "ALTER TABLE tasks ADD COLUMN answer_type TEXT DEFAULT 'quiz'",
             "ALTER TABLE users ADD COLUMN full_name TEXT",
-            "ALTER TABLE tasks ADD COLUMN created_by INTEGER",
             "ALTER TABLE web_users ADD COLUMN nickname TEXT",
             "ALTER TABLE users ADD COLUMN league TEXT DEFAULT 'bronze'",
             "ALTER TABLE users ADD COLUMN weekly_points INTEGER DEFAULT 0",
             "ALTER TABLE web_users ADD COLUMN league TEXT DEFAULT 'bronze'",
             "ALTER TABLE web_users ADD COLUMN weekly_points INTEGER DEFAULT 0",
             "ALTER TABLE users ADD COLUMN league_group_id INTEGER",
-            "ALTER TABLE web_users ADD COLUMN league_group_id INTEGER",
-            "ALTER TABLE tasks ADD COLUMN task_text TEXT",
-            "ALTER TABLE tasks ADD COLUMN solution_text TEXT"
+            "ALTER TABLE web_users ADD COLUMN league_group_id INTEGER"
         ]
         for sql in migrations:
             try:
@@ -230,15 +231,21 @@ async def add_task(
         answer_type: str,
         created_by: int,
         task_text: str = "",
-        solution_text: str = ""
+        solution_text: str = "",
+        option_a_text: str = "",
+        option_b_text: str = "",
+        option_c_text: str = "",
+        option_d_text: str = ""
 ) -> int:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         cursor = await conn.execute(
             """INSERT INTO tasks 
-               (image_path, correct_option, solution_image_path, answer_type, created_by, task_text, solution_text)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (image_path, correct_option, solution_image_path, answer_type, created_by, task_text, solution_text)
+               (image_path, correct_option, solution_image_path, answer_type, created_by, task_text, solution_text, 
+                option_a_text, option_b_text, option_c_text, option_d_text)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (image_path, correct_option, solution_image_path, answer_type, created_by, task_text, solution_text,
+             option_a_text, option_b_text, option_c_text, option_d_text)
         )
         await conn.commit()
         return cursor.lastrowid
@@ -324,6 +331,20 @@ async def update_solution_text(task_id: int, text: str) -> None:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         await conn.execute("UPDATE tasks SET solution_text = ? WHERE id = ?", (text, task_id))
         await conn.commit()
+
+
+async def update_option_text(task_id: int, option: str, text: str) -> None:
+    """Update quiz option text (LaTeX or plain text)"""
+    # Validate option to prevent SQL injection
+    if option not in ['a', 'b', 'c', 'd']:
+        raise ValueError(f"Invalid option: {option}. Must be one of: a, b, c, d")
+    
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        column = f"option_{option}_text"
+        await conn.execute(f"UPDATE tasks SET {column} = ? WHERE id = ?", (text, task_id))
+        await conn.commit()
+
+
 
 
 # ==================== ШЕШІМДЕР ====================

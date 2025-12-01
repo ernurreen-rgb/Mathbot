@@ -13,6 +13,10 @@ interface Task {
   correct_option?: string;
   task_text?: string;
   solution_text?: string;
+  option_a_text?: string;
+  option_b_text?: string;
+  option_c_text?: string;
+  option_d_text?: string;
 }
 
 interface CheckResult {
@@ -177,30 +181,33 @@ export default function TasksPage() {
             </div>
           )}
 
-          {/* Task Image (if provided) */}
-          {task.image_path && (
-            <div className="mb-8">
-              <img
-                src={`${apiUrl}/${task.image_path}`}
-                alt={`Есеп ${task.id}`}
-                className="w-full rounded-lg shadow-md"
-              />
-            </div>
-          )}
-
           {!checkResult && (
             <div className="mb-6">
               {task.answer_type === "quiz" ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {["A", "B", "C", "D"].map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => handleQuizAnswer(option)}
-                      className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg transform hover:scale-105"
-                    >
-                      {option}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {["A", "B", "C", "D"].map((option) => {
+                    const optionKey = `option_${option.toLowerCase()}_text` as keyof Task;
+                    const optionText = task[optionKey];
+                    
+                    return (
+                      <button
+                        key={option}
+                        onClick={() => handleQuizAnswer(option)}
+                        className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg transform hover:scale-105 text-left"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl font-black">{option}.</span>
+                          <div className="flex-1">
+                            {optionText ? (
+                              <LatexRenderer text={String(optionText)} className="text-base" />
+                            ) : (
+                              <span className="text-lg">{option}</span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <form onSubmit={handleTextSubmit} className="space-y-4">
@@ -262,15 +269,6 @@ export default function TasksPage() {
                     <LatexRenderer text={checkResult.solution_text} className="text-lg" />
                   </div>
                 </div>
-              )}
-              
-              {/* Solution Image */}
-              {checkResult.solution_image_path && (
-                <img
-                  src={`${apiUrl}/${checkResult.solution_image_path}`}
-                  alt="Шешімі"
-                  className="w-full rounded-lg shadow-md"
-                />
               )}
             </div>
           )}

@@ -3,6 +3,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession, signIn } from "next-auth/react";
+import dynamic from "next/dynamic";
+
+// Dynamically import MathEditor to avoid SSR issues
+const MathEditor = dynamic(() => import("../../components/MathEditor"), {
+  ssr: false,
+  loading: () => <div className="border-2 border-gray-300 rounded-lg p-3 min-h-[60px] bg-gray-50 animate-pulse"></div>
+});
+
 
 interface Task {
   id: number;
@@ -14,6 +22,10 @@ interface Task {
   created_by?: number;
   task_text?: string;
   solution_text?: string;
+  option_a_text?: string;
+  option_b_text?: string;
+  option_c_text?: string;
+  option_d_text?: string;
 }
 
 interface TasksResponse {
@@ -273,7 +285,7 @@ export default function AdminPage() {
                   <thead>
                     <tr className="border-b-2 border-gray-200">
                       <th className="text-left py-3 px-4">ID</th>
-                      <th className="text-left py-3 px-4">Сурет</th>
+                      <th className="text-left py-3 px-4">Есеп мәтіні</th>
                       <th className="text-left py-3 px-4">Түрі</th>
                       <th className="text-left py-3 px-4">Жауап</th>
                       <th className="text-left py-3 px-4">Әрекеттер</th>
@@ -284,11 +296,9 @@ export default function AdminPage() {
                       <tr key={task.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium">#{task.id}</td>
                         <td className="py-3 px-4">
-                          <img
-                            src={`${apiUrl}/${task.image_path}`}
-                            alt={`Есеп ${task.id}`}
-                            className="w-24 h-16 object-cover rounded-lg shadow"
-                          />
+                          <div className="max-w-md truncate text-gray-700">
+                            {task.task_text || "—"}
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded-full text-sm font-medium ${
@@ -367,33 +377,13 @@ interface TaskFormProps {
 function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskFormProps) {
   const [answerType, setAnswerType] = useState(task?.answer_type || "quiz");
   const [correctOption, setCorrectOption] = useState(task?.correct_option || "");
-  const [taskImage, setTaskImage] = useState<File | null>(null);
-  const [solutionImage, setSolutionImage] = useState<File | null>(null);
   const [taskText, setTaskText] = useState(task?.task_text || "");
   const [solutionText, setSolutionText] = useState(task?.solution_text || "");
+  const [optionAText, setOptionAText] = useState(task?.option_a_text || "");
+  const [optionBText, setOptionBText] = useState(task?.option_b_text || "");
+  const [optionCText, setOptionCText] = useState(task?.option_c_text || "");
+  const [optionDText, setOptionDText] = useState(task?.option_d_text || "");
   const [submitting, setSubmitting] = useState(false);
-  const [taskImagePreview, setTaskImagePreview] = useState<string | null>(
-    task?.image_path ? `${apiUrl}/${task.image_path}` : null
-  );
-  const [solutionImagePreview, setSolutionImagePreview] = useState<string | null>(
-    task?.solution_image_path ? `${apiUrl}/${task.solution_image_path}` : null
-  );
-
-  const handleTaskImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setTaskImage(file);
-      setTaskImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSolutionImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSolutionImage(file);
-      setSolutionImagePreview(URL.createObjectURL(file));
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -404,13 +394,15 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
       
       if (task) {
         // Update existing task
-        if (taskImage) formData.append("task_image", taskImage);
-        if (solutionImage) formData.append("solution_image", solutionImage);
         if (correctOption) formData.append("correct_option", correctOption);
         if (answerType) formData.append("answer_type", answerType);
         // Always append text fields for updates (empty string is valid)
         formData.append("task_text", taskText);
         formData.append("solution_text", solutionText);
+        formData.append("option_a_text", optionAText);
+        formData.append("option_b_text", optionBText);
+        formData.append("option_c_text", optionCText);
+        formData.append("option_d_text", optionDText);
 
         const res = await fetch(`${apiUrl}/api/admin/tasks/${task.id}`, {
           method: "PUT",
@@ -426,19 +418,21 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
         }
       } else {
         // Create new task
-        if (!taskText && !taskImage) {
-          throw new Error("Есеп мәтінін немесе суретін жүктеңіз");
+        if (!taskText) {
+          throw new Error("Есеп мәтінін енгізіңіз");
         }
         if (!correctOption) {
           throw new Error("Дұрыс жауапты енгізіңіз");
         }
 
-        if (taskImage) formData.append("task_image", taskImage);
-        if (solutionImage) formData.append("solution_image", solutionImage);
         formData.append("correct_option", correctOption);
         formData.append("answer_type", answerType);
         formData.append("task_text", taskText);
         formData.append("solution_text", solutionText);
+        formData.append("option_a_text", optionAText);
+        formData.append("option_b_text", optionBText);
+        formData.append("option_c_text", optionCText);
+        formData.append("option_d_text", optionDText);
 
         const res = await fetch(`${apiUrl}/api/admin/tasks`, {
           method: "POST",
@@ -546,76 +540,89 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
             {/* Task Text (LaTeX/Plain text) */}
             <div>
               <label className="block text-gray-700 font-medium mb-2">
-                Есеп мәтіні (LaTeX немесе қарапайым мәтін) {!task && <span className="text-red-500">*</span>}
+                Есеп мәтіні {!task && <span className="text-red-500">*</span>}
               </label>
-              <textarea
+              <MathEditor
                 value={taskText}
-                onChange={(e) => setTaskText(e.target.value)}
-                placeholder="Есепті мәтін форматында енгізіңіз. LaTeX үшін $ $ немесе $$ $$ қолданыңыз"
-                rows={6}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none font-mono"
+                onChange={setTaskText}
+                placeholder="Есепті енгізіңіз. Математикалық формулалар үшін редакторды пайдаланыңыз."
+                className="mb-2"
               />
               <p className="text-sm text-gray-500 mt-1">
-                LaTeX мысалы: $x^2 + y^2 = r^2$ немесе $$\int_0^1 x^2 dx$$
+                💡 Визуалды редактор - батырмаларды басып формулаларды енгізіңіз. LaTeX білуге қажеті жоқ!
               </p>
             </div>
 
-            {/* Task Image (Optional) */}
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Есеп суреті (міндетті емес)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleTaskImageChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-              {taskImagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={taskImagePreview}
-                    alt="Есеп"
-                    className="max-w-full max-h-48 rounded-lg shadow"
-                  />
+            {/* Quiz Options (if quiz type) */}
+            {answerType === "quiz" && (
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">📝 Жауап нұсқалары (A, B, C, D)</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Әр нұсқаның мәтінін енгізіңіз. Бос қалдырсаңыз, тек әріптер көрсетіледі.
+                </p>
+                
+                <div className="space-y-4">
+                  {/* Option A */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Нұсқа A {correctOption === "A" && <span className="text-green-600">✓ (дұрыс)</span>}
+                    </label>
+                    <MathEditor
+                      value={optionAText}
+                      onChange={setOptionAText}
+                      placeholder="A нұсқасының мәтіні"
+                    />
+                  </div>
+
+                  {/* Option B */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Нұсқа B {correctOption === "B" && <span className="text-green-600">✓ (дұрыс)</span>}
+                    </label>
+                    <MathEditor
+                      value={optionBText}
+                      onChange={setOptionBText}
+                      placeholder="B нұсқасының мәтіні"
+                    />
+                  </div>
+
+                  {/* Option C */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Нұсқа C {correctOption === "C" && <span className="text-green-600">✓ (дұрыс)</span>}
+                    </label>
+                    <MathEditor
+                      value={optionCText}
+                      onChange={setOptionCText}
+                      placeholder="C нұсқасының мәтіні"
+                    />
+                  </div>
+
+                  {/* Option D */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Нұсқа D {correctOption === "D" && <span className="text-green-600">✓ (дұрыс)</span>}
+                    </label>
+                    <MathEditor
+                      value={optionDText}
+                      onChange={setOptionDText}
+                      placeholder="D нұсқасының мәтіні"
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Solution Text (LaTeX/Plain text) */}
             <div>
               <label className="block text-gray-700 font-medium mb-2">
-                Шешім мәтіні (LaTeX немесе қарапайым мәтін)
+                Шешім мәтіні
               </label>
-              <textarea
+              <MathEditor
                 value={solutionText}
-                onChange={(e) => setSolutionText(e.target.value)}
-                placeholder="Шешімді мәтін форматында енгізіңіз"
-                rows={6}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none font-mono"
+                onChange={setSolutionText}
+                placeholder="Шешімді енгізіңіз"
               />
-            </div>
-
-            {/* Solution Image (Optional) */}
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Шешім суреті (міндетті емес)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleSolutionImageChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-              {solutionImagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={solutionImagePreview}
-                    alt="Шешім"
-                    className="max-w-full max-h-48 rounded-lg shadow"
-                  />
-                </div>
-              )}
             </div>
 
             {/* Submit Buttons */}
