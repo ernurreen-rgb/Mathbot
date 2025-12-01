@@ -1,6 +1,7 @@
 // web/app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {

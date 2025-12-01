@@ -98,6 +98,10 @@ async def get_random_task(email: str = ""):
         "correct_option": task.get("correct_option"),  # For checking answers
         "task_text": task.get("task_text"),  # LaTeX/text content
         "solution_text": task.get("solution_text"),  # LaTeX/text solution
+        "option_a_text": task.get("option_a_text"),  # Quiz option A content
+        "option_b_text": task.get("option_b_text"),  # Quiz option B content
+        "option_c_text": task.get("option_c_text"),  # Quiz option C content
+        "option_d_text": task.get("option_d_text"),  # Quiz option D content
     }
 
 @app.get("/api/rating")
@@ -300,6 +304,10 @@ async def admin_get_all_tasks(
             "created_by": task.get("created_by"),
             "task_text": task.get("task_text"),
             "solution_text": task.get("solution_text"),
+            "option_a_text": task.get("option_a_text"),
+            "option_b_text": task.get("option_b_text"),
+            "option_c_text": task.get("option_c_text"),
+            "option_d_text": task.get("option_d_text"),
         })
     
     return {
@@ -333,6 +341,10 @@ async def admin_get_task(
         "created_by": task.get("created_by"),
         "task_text": task.get("task_text"),
         "solution_text": task.get("solution_text"),
+        "option_a_text": task.get("option_a_text"),
+        "option_b_text": task.get("option_b_text"),
+        "option_c_text": task.get("option_c_text"),
+        "option_d_text": task.get("option_d_text"),
     }
 
 
@@ -344,6 +356,10 @@ async def admin_create_task(
     answer_type: str = Form("quiz"),
     task_text: str = Form(""),
     solution_text: str = Form(""),
+    option_a_text: str = Form(""),
+    option_b_text: str = Form(""),
+    option_c_text: str = Form(""),
+    option_d_text: str = Form(""),
     email: str = Header(None, alias="X-Admin-Email")
 ):
     """Create a new task (admin only)"""
@@ -369,7 +385,11 @@ async def admin_create_task(
         answer_type=answer_type,
         created_by=0,  # Web admin
         task_text=task_text,
-        solution_text=solution_text
+        solution_text=solution_text,
+        option_a_text=option_a_text,
+        option_b_text=option_b_text,
+        option_c_text=option_c_text,
+        option_d_text=option_d_text
     )
     
     # Use absolute paths for file storage
@@ -416,6 +436,10 @@ async def admin_create_task(
         "solution_image_path": convert_to_relative_path(str(solution_image_path), "/solutions") if solution_image_path else None,
         "task_text": task_text,
         "solution_text": solution_text,
+        "option_a_text": option_a_text,
+        "option_b_text": option_b_text,
+        "option_c_text": option_c_text,
+        "option_d_text": option_d_text,
         "message": "Task created successfully"
     }
 
@@ -429,6 +453,10 @@ async def admin_update_task(
     answer_type: str = Form(None),
     task_text: str = Form(None),
     solution_text: str = Form(None),
+    option_a_text: str = Form(None),
+    option_b_text: str = Form(None),
+    option_c_text: str = Form(None),
+    option_d_text: str = Form(None),
     email: str = Header(None, alias="X-Admin-Email")
 ):
     """Update an existing task (admin only)"""
@@ -483,6 +511,16 @@ async def admin_update_task(
     if solution_text is not None:
         await db.update_solution_text(task_id, solution_text)
     
+    # Update option texts if provided
+    if option_a_text is not None:
+        await db.update_option_text(task_id, 'a', option_a_text)
+    if option_b_text is not None:
+        await db.update_option_text(task_id, 'b', option_b_text)
+    if option_c_text is not None:
+        await db.update_option_text(task_id, 'c', option_c_text)
+    if option_d_text is not None:
+        await db.update_option_text(task_id, 'd', option_d_text)
+    
     # Get updated task
     updated_task = await db.get_task(task_id)
     
@@ -494,6 +532,10 @@ async def admin_update_task(
         "solution_image_path": convert_to_relative_path(updated_task.get("solution_image_path"), "/solutions"),
         "task_text": updated_task.get("task_text"),
         "solution_text": updated_task.get("solution_text"),
+        "option_a_text": updated_task.get("option_a_text"),
+        "option_b_text": updated_task.get("option_b_text"),
+        "option_c_text": updated_task.get("option_c_text"),
+        "option_d_text": updated_task.get("option_d_text"),
         "message": "Task updated successfully"
     }
 

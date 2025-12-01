@@ -17,7 +17,6 @@ export default function LatexRenderer({ text, className = "" }: LatexRendererPro
       if (typeof window !== "undefined" && containerRef.current) {
         try {
           const katex = (await import("katex")).default;
-          await import("katex/dist/katex.min.css");
           
           const container = containerRef.current;
           container.innerHTML = "";

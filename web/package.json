@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "katex": "^0.16.9",
+    "mathlive": "^0.98.4",
     "next": "^14.2.33",
     "next-auth": "^4.24.13",
     "react": "18.3.1",

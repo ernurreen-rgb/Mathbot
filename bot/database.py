@@ -106,7 +106,11 @@ async def init_db() -> None:
             "ALTER TABLE users ADD COLUMN league_group_id INTEGER",
             "ALTER TABLE web_users ADD COLUMN league_group_id INTEGER",
             "ALTER TABLE tasks ADD COLUMN task_text TEXT",
-            "ALTER TABLE tasks ADD COLUMN solution_text TEXT"
+            "ALTER TABLE tasks ADD COLUMN solution_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN option_a_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN option_b_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN option_c_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN option_d_text TEXT"
         ]
         for sql in migrations:
             try:
@@ -230,15 +234,21 @@ async def add_task(
         answer_type: str,
         created_by: int,
         task_text: str = "",
-        solution_text: str = ""
+        solution_text: str = "",
+        option_a_text: str = "",
+        option_b_text: str = "",
+        option_c_text: str = "",
+        option_d_text: str = ""
 ) -> int:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         conn.row_factory = aiosqlite.Row
         cursor = await conn.execute(
             """INSERT INTO tasks 
-               (image_path, correct_option, solution_image_path, answer_type, created_by, task_text, solution_text)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (image_path, correct_option, solution_image_path, answer_type, created_by, task_text, solution_text)
+               (image_path, correct_option, solution_image_path, answer_type, created_by, task_text, solution_text, 
+                option_a_text, option_b_text, option_c_text, option_d_text)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (image_path, correct_option, solution_image_path, answer_type, created_by, task_text, solution_text,
+             option_a_text, option_b_text, option_c_text, option_d_text)
         )
         await conn.commit()
         return cursor.lastrowid
@@ -324,6 +334,15 @@ async def update_solution_text(task_id: int, text: str) -> None:
     async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
         await conn.execute("UPDATE tasks SET solution_text = ? WHERE id = ?", (text, task_id))
         await conn.commit()
+
+
+async def update_option_text(task_id: int, option: str, text: str) -> None:
+    """Update quiz option text (LaTeX or plain text)"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        column = f"option_{option}_text"
+        await conn.execute(f"UPDATE tasks SET {column} = ? WHERE id = ?", (text, task_id))
+        await conn.commit()
+
 
 
 # ==================== ШЕШІМДЕР ====================
