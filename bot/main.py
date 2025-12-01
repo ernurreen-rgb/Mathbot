@@ -660,17 +660,17 @@ async def admin_get_ai_solution(
     """Get AI solution status for a task (admin only)"""
     verify_admin_email(email)
     
-    task = await db.get_task(task_id)
-    if not task:
+    # Use specialized function for better performance
+    ai_status = await db.get_ai_solution_status(task_id)
+    if not ai_status:
         raise HTTPException(status_code=404, detail="Task not found")
     
     return {
         "task_id": task_id,
-        "ai_solution_text": task.get("ai_solution_text"),
-        "ai_solution_status": task.get("ai_solution_status", "none"),
-        "ai_solution_requested_at": task.get("ai_solution_requested_at")
+        "ai_solution_text": ai_status.get("ai_solution_text"),
+        "ai_solution_status": ai_status.get("ai_solution_status", "none"),
+        "ai_solution_requested_at": ai_status.get("ai_solution_requested_at")
     }
-
 
 
 # ========== НАСТРОЙКИ ==========

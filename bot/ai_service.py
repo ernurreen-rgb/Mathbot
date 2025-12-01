@@ -2,7 +2,6 @@
 import os
 from typing import Optional, Dict, Any
 import aiohttp
-import json
 
 # OpenAI API configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
