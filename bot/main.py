@@ -81,6 +81,31 @@ def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> O
     prefix = url_prefix.lstrip('/')
     return f"{prefix}/{Path(absolute_path).name}"
 
+
+def get_solution_text_for_task(task: dict) -> Optional[str]:
+    """Get the appropriate solution text for a task.
+    
+    Priority order:
+    1. AI solution (if approved)
+    2. Manual solution text
+    3. None (will fall back to solution image)
+    
+    Args:
+        task: Task dictionary from database
+        
+    Returns:
+        Solution text or None
+    """
+    # Priority 1: AI solution if approved
+    if task.get("ai_solution_status") == "approved" and task.get("ai_solution_text"):
+        return task.get("ai_solution_text")
+    # Priority 2: Manual solution text
+    elif task.get("solution_text"):
+        return task.get("solution_text")
+    # Priority 3: None (caller will check for solution image)
+    return None
+
+
 @app.get("/api/task/random")
 async def get_random_task(email: str = ""):
     """Get random unsolved task for user"""
@@ -146,13 +171,8 @@ async def check_answer(submission: AnswerSubmission):
         else:
             await db.mark_web_attempted(submission.email, submission.task_id)
     
-    # Determine which solution to show
-    # Priority: AI solution (if approved) > manual solution_text > solution_image_path
-    solution_text = None
-    if task.get("ai_solution_status") == "approved" and task.get("ai_solution_text"):
-        solution_text = task.get("ai_solution_text")
-    elif task.get("solution_text"):
-        solution_text = task.get("solution_text")
+    # Get appropriate solution text (AI solution if approved, else manual solution)
+    solution_text = get_solution_text_for_task(task)
     
     return {
         "correct": is_correct,
@@ -1020,14 +1040,8 @@ async def handle_solution_request(call: CallbackQuery):
     task_id = int(call.data.split(":")[1])
     task = await db.get_task(task_id)
 
-    # Determine which solution to show
-    # Priority: AI solution (if approved) > manual solution_text > solution_image_path
-    solution_text = None
-    if task.get("ai_solution_status") == "approved" and task.get("ai_solution_text"):
-        solution_text = task.get("ai_solution_text")
-    elif task.get('solution_text'):
-        solution_text = task.get('solution_text')
-    
+    # Get appropriate solution text (AI solution if approved, else manual solution)
+    solution_text = get_solution_text_for_task(task)
     solution_path = task.get('solution_image_path')
     
     # Send text solution if available
