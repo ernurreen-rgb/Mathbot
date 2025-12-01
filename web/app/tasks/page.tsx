@@ -10,12 +10,15 @@ interface Task {
   answer_type: string;
   solution_image_path?: string;
   correct_option?: string;
+  task_text?: string;
+  solution_text?: string;
 }
 
 interface CheckResult {
   correct: boolean;
   correct_answer?: string;
   solution_image_path?: string;
+  solution_text?: string;
 }
 
 export default function TasksPage() {
@@ -164,13 +167,32 @@ export default function TasksPage() {
             </p>
           </div>
 
-          <div className="mb-8">
-            <img
-              src={`${apiUrl}/${task.image_path}`}
-              alt={`Есеп ${task.id}`}
-              className="w-full rounded-lg shadow-md"
-            />
-          </div>
+          {/* Task Text (LaTeX or plain text) */}
+          {task.task_text && (
+            <div className="mb-6 p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
+              <div className="prose max-w-none">
+                <div 
+                  className="text-lg whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{
+                    __html: task.task_text
+                      .replace(/\$\$(.*?)\$\$/g, '<span class="math-block">$$1$$</span>')
+                      .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Task Image (if provided) */}
+          {task.image_path && (
+            <div className="mb-8">
+              <img
+                src={`${apiUrl}/${task.image_path}`}
+                alt={`Есеп ${task.id}`}
+                className="w-full rounded-lg shadow-md"
+              />
+            </div>
+          )}
 
           {!checkResult && (
             <div className="mb-6">
@@ -217,7 +239,7 @@ export default function TasksPage() {
               {checkResult.correct && <p className="text-green-700">+1 ұпай</p>}
               
               <div className="mt-4 space-x-4">
-                {checkResult.solution_image_path && (
+                {(checkResult.solution_image_path || checkResult.solution_text) && (
                   <button
                     onClick={() => setShowSolution(!showSolution)}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
@@ -235,14 +257,34 @@ export default function TasksPage() {
             </div>
           )}
 
-          {showSolution && checkResult?.solution_image_path && (
+          {showSolution && checkResult && (
             <div className="mb-6">
               <h3 className="text-xl font-bold text-gray-800 mb-3">📝 Шешімі:</h3>
-              <img
-                src={`${apiUrl}/${checkResult.solution_image_path}`}
-                alt="Шешімі"
-                className="w-full rounded-lg shadow-md"
-              />
+              
+              {/* Solution Text */}
+              {checkResult.solution_text && (
+                <div className="mb-4 p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
+                  <div className="prose max-w-none">
+                    <div 
+                      className="text-lg whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{
+                        __html: checkResult.solution_text
+                          .replace(/\$\$(.*?)\$\$/g, '<span class="math-block">$$1$$</span>')
+                          .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Solution Image */}
+              {checkResult.solution_image_path && (
+                <img
+                  src={`${apiUrl}/${checkResult.solution_image_path}`}
+                  alt="Шешімі"
+                  className="w-full rounded-lg shadow-md"
+                />
+              )}
             </div>
           )}
         </div>

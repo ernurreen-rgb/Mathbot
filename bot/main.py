@@ -96,6 +96,8 @@ async def get_random_task(email: str = ""):
         "answer_type": task.get("answer_type", "quiz"),
         "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
         "correct_option": task.get("correct_option"),  # For checking answers
+        "task_text": task.get("task_text"),  # LaTeX/text content
+        "solution_text": task.get("solution_text"),  # LaTeX/text solution
     }
 
 @app.get("/api/rating")
@@ -143,6 +145,7 @@ async def check_answer(submission: AnswerSubmission):
         "correct": is_correct,
         "correct_answer": task["correct_option"] if not is_correct else None,
         "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
+        "solution_text": task.get("solution_text"),  # LaTeX/text solution
         "newly_unlocked_achievements": newly_unlocked_achievements
     }
 
@@ -295,6 +298,8 @@ async def admin_get_all_tasks(
             "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
             "created_at": task.get("created_at"),
             "created_by": task.get("created_by"),
+            "task_text": task.get("task_text"),
+            "solution_text": task.get("solution_text"),
         })
     
     return {
@@ -326,15 +331,19 @@ async def admin_get_task(
         "solution_image_path": convert_to_relative_path(task.get("solution_image_path"), "/solutions"),
         "created_at": task.get("created_at"),
         "created_by": task.get("created_by"),
+        "task_text": task.get("task_text"),
+        "solution_text": task.get("solution_text"),
     }
 
 
 @app.post("/api/admin/tasks")
 async def admin_create_task(
-    task_image: UploadFile = File(...),
-    solution_image: UploadFile = File(...),
+    task_image: UploadFile = File(None),
+    solution_image: UploadFile = File(None),
     correct_option: str = Form(...),
     answer_type: str = Form("quiz"),
+    task_text: str = Form(""),
+    solution_text: str = Form(""),
     email: str = Header(None, alias="X-Admin-Email")
 ):
     """Create a new task (admin only)"""
@@ -348,13 +357,19 @@ async def admin_create_task(
     if answer_type == "quiz" and correct_option.upper() not in VALID_QUIZ_OPTIONS:
         raise HTTPException(status_code=400, detail=f"Quiz answer must be one of: {', '.join(VALID_QUIZ_OPTIONS)}")
     
+    # Validate that either text or image is provided
+    if not task_text and not task_image:
+        raise HTTPException(status_code=400, detail="Either task_text or task_image must be provided")
+    
     # Create the task first to get the ID
     task_id = await db.add_task(
         image_path="",
         correct_option=correct_option.upper() if answer_type == "quiz" else correct_option,
         solution_image_path="",
         answer_type=answer_type,
-        created_by=0  # Web admin
+        created_by=0,  # Web admin
+        task_text=task_text,
+        solution_text=solution_text
     )
     
     # Use absolute paths for file storage
@@ -364,37 +379,43 @@ async def admin_create_task(
     images_dir.mkdir(parents=True, exist_ok=True)
     solutions_dir.mkdir(parents=True, exist_ok=True)
     
-    # Save task image
-    task_image_path = images_dir / f"task_{task_id}.jpg"
-    try:
-        content = await task_image.read()
-        async with aiofiles.open(task_image_path, "wb") as f:
-            await f.write(content)
-        await db.update_task_image_path(task_id, str(task_image_path))
-    except Exception as e:
-        await db.delete_task(task_id)
-        raise HTTPException(status_code=500, detail=f"Failed to save task image: {str(e)}")
+    # Save task image if provided
+    task_image_path = None
+    if task_image:
+        task_image_path = images_dir / f"task_{task_id}.jpg"
+        try:
+            content = await task_image.read()
+            async with aiofiles.open(task_image_path, "wb") as f:
+                await f.write(content)
+            await db.update_task_image_path(task_id, str(task_image_path))
+        except Exception as e:
+            await db.delete_task(task_id)
+            raise HTTPException(status_code=500, detail=f"Failed to save task image: {str(e)}")
     
-    # Save solution image
-    solution_image_path = solutions_dir / f"solution_{task_id}.jpg"
-    try:
-        content = await solution_image.read()
-        async with aiofiles.open(solution_image_path, "wb") as f:
-            await f.write(content)
-        await db.update_task_solution_image_path(task_id, str(solution_image_path))
-    except Exception as e:
-        # Clean up task image if solution fails
-        if task_image_path.exists():
-            task_image_path.unlink()
-        await db.delete_task(task_id)
-        raise HTTPException(status_code=500, detail=f"Failed to save solution image: {str(e)}")
+    # Save solution image if provided
+    solution_image_path = None
+    if solution_image:
+        solution_image_path = solutions_dir / f"solution_{task_id}.jpg"
+        try:
+            content = await solution_image.read()
+            async with aiofiles.open(solution_image_path, "wb") as f:
+                await f.write(content)
+            await db.update_task_solution_image_path(task_id, str(solution_image_path))
+        except Exception as e:
+            # Clean up task image if solution fails
+            if task_image_path and task_image_path.exists():
+                task_image_path.unlink()
+            await db.delete_task(task_id)
+            raise HTTPException(status_code=500, detail=f"Failed to save solution image: {str(e)}")
     
     return {
         "id": task_id,
-        "image_path": convert_to_relative_path(str(task_image_path), "/images"),
+        "image_path": convert_to_relative_path(str(task_image_path), "/images") if task_image_path else None,
         "correct_option": correct_option.upper() if answer_type == "quiz" else correct_option,
         "answer_type": answer_type,
-        "solution_image_path": convert_to_relative_path(str(solution_image_path), "/solutions"),
+        "solution_image_path": convert_to_relative_path(str(solution_image_path), "/solutions") if solution_image_path else None,
+        "task_text": task_text,
+        "solution_text": solution_text,
         "message": "Task created successfully"
     }
 
@@ -406,6 +427,8 @@ async def admin_update_task(
     solution_image: UploadFile = File(None),
     correct_option: str = Form(None),
     answer_type: str = Form(None),
+    task_text: str = Form(None),
+    solution_text: str = Form(None),
     email: str = Header(None, alias="X-Admin-Email")
 ):
     """Update an existing task (admin only)"""
@@ -452,6 +475,14 @@ async def admin_update_task(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to save solution image: {str(e)}")
     
+    # Update task_text if provided
+    if task_text is not None:
+        await db.update_task_text(task_id, task_text)
+    
+    # Update solution_text if provided
+    if solution_text is not None:
+        await db.update_solution_text(task_id, solution_text)
+    
     # Get updated task
     updated_task = await db.get_task(task_id)
     
@@ -461,6 +492,8 @@ async def admin_update_task(
         "correct_option": updated_task["correct_option"],
         "answer_type": updated_task.get("answer_type", "quiz"),
         "solution_image_path": convert_to_relative_path(updated_task.get("solution_image_path"), "/solutions"),
+        "task_text": updated_task.get("task_text"),
+        "solution_text": updated_task.get("solution_text"),
         "message": "Task updated successfully"
     }
 
@@ -634,6 +667,44 @@ async def send_random_task_to_user(bot: Bot, chat_id: int, user_id: int, state: 
         await bot.send_message(chat_id, msg)
         return
 
+    answer_type = task.get("answer_type", "quiz")
+    task_text = task.get("task_text", "")
+    
+    # If task has text content, send it as a message
+    if task_text:
+        caption = f"📝 **Есеп #{task['id']}**
+
+{task_text}
+
+"
+        
+        if answer_type == "text":
+            caption += "✍️ Жауапты хабарламамен енгізіңіз (сан немесе мәтін)."
+            await bot.send_message(chat_id, caption, parse_mode="Markdown")
+            await state.update_data(current_task_id=task["id"])
+            await state.set_state(UserStates.solving_task)
+        else:
+            caption += "Дұрыс жауапты таңдаңыз:"
+            keyboard = make_options_keyboard(task["id"])
+            await bot.send_message(
+                chat_id=chat_id,
+                text=caption,
+                reply_markup=keyboard,
+                parse_mode="Markdown"
+            )
+        
+        # If there's also an image, send it separately
+        img_path = Path(task["image_path"]) if task.get("image_path") else None
+        if img_path and img_path.exists():
+            try:
+                async with aiofiles.open(img_path, "rb") as f:
+                    input_file = BufferedInputFile(await f.read(), filename=img_path.name)
+                await bot.send_photo(chat_id=chat_id, photo=input_file)
+            except Exception:
+                pass  # Image is optional when text is present
+        return
+    
+    # Legacy image-based task
     img_path = Path(task["image_path"])
     if not img_path.exists():
         await bot.send_message(chat_id, f"Қате: ID {task['id']} файлы табылмады.")
@@ -643,12 +714,11 @@ async def send_random_task_to_user(bot: Bot, chat_id: int, user_id: int, state: 
         async with aiofiles.open(img_path, "rb") as f:
             input_file = BufferedInputFile(await f.read(), filename=img_path.name)
 
-        answer_type = task.get("answer_type", "quiz")
-
         if answer_type == "text":
             await bot.send_photo(
                 chat_id=chat_id, photo=input_file,
-                caption="✍️ **Бұл есеп қолмен енгізуді талап етеді.**\nЖауапты хабарламамен енгізіңіз (сан немесе мәтін).",
+                caption="✍️ **Бұл есеп қолмен енгізуді талап етеді.**
+Жауапты хабарламамен енгізіңіз (сан немесе мәтін).",
                 parse_mode="Markdown"
             )
             await state.update_data(current_task_id=task["id"])
@@ -834,16 +904,30 @@ async def handle_solution_request(call: CallbackQuery):
     task_id = int(call.data.split(":")[1])
     task = await db.get_task(task_id)
 
-    path = task.get('solution_image_path')
-    if not path or not Path(path).exists():
-        await call.message.reply("Шешім суреті табылмады.")
-        return
-
-    async with aiofiles.open(Path(path), "rb") as f:
-        await call.message.reply_photo(
-            photo=BufferedInputFile(await f.read(), filename="solution.jpg"),
-            caption=f"**📝 Шешімі (ID {task_id})**", parse_mode="Markdown"
+    solution_text = task.get('solution_text')
+    solution_path = task.get('solution_image_path')
+    
+    # Send text solution if available
+    if solution_text:
+        await call.message.reply(
+            f"**📝 Шешімі (ID {task_id})**\n\n{solution_text}",
+            parse_mode="Markdown"
         )
+    
+    # Send image solution if available
+    if solution_path and Path(solution_path).exists():
+        async with aiofiles.open(Path(solution_path), "rb") as f:
+            await call.message.reply_photo(
+                photo=BufferedInputFile(await f.read(), filename="solution.jpg"),
+                caption=f"**📝 Шешімі (ID {task_id})**" if not solution_text else None,
+                parse_mode="Markdown"
+            )
+        return
+    
+    # No solution available
+    if not solution_text and (not solution_path or not Path(solution_path).exists()):
+        await call.message.reply("Шешім табылмады.")
+
 
 
 # ========== АДМИН: ДОБАВЛЕНИЕ ЗАДАЧИ (ГИБРИД) ==========

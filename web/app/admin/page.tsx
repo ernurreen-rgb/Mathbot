@@ -12,6 +12,8 @@ interface Task {
   solution_image_path?: string;
   created_at?: string;
   created_by?: number;
+  task_text?: string;
+  solution_text?: string;
 }
 
 interface TasksResponse {
@@ -367,6 +369,8 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
   const [correctOption, setCorrectOption] = useState(task?.correct_option || "");
   const [taskImage, setTaskImage] = useState<File | null>(null);
   const [solutionImage, setSolutionImage] = useState<File | null>(null);
+  const [taskText, setTaskText] = useState(task?.task_text || "");
+  const [solutionText, setSolutionText] = useState(task?.solution_text || "");
   const [submitting, setSubmitting] = useState(false);
   const [taskImagePreview, setTaskImagePreview] = useState<string | null>(
     task?.image_path ? `${apiUrl}/${task.image_path}` : null
@@ -404,6 +408,8 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
         if (solutionImage) formData.append("solution_image", solutionImage);
         if (correctOption) formData.append("correct_option", correctOption);
         if (answerType) formData.append("answer_type", answerType);
+        if (taskText !== undefined) formData.append("task_text", taskText);
+        if (solutionText !== undefined) formData.append("solution_text", solutionText);
 
         const res = await fetch(`${apiUrl}/api/admin/tasks/${task.id}`, {
           method: "PUT",
@@ -419,17 +425,19 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
         }
       } else {
         // Create new task
-        if (!taskImage || !solutionImage) {
-          throw new Error("Есеп пен шешім суреттерін жүктеңіз");
+        if (!taskText && !taskImage) {
+          throw new Error("Есеп мәтінін немесе суретін жүктеңіз");
         }
         if (!correctOption) {
           throw new Error("Дұрыс жауапты енгізіңіз");
         }
 
-        formData.append("task_image", taskImage);
-        formData.append("solution_image", solutionImage);
+        if (taskImage) formData.append("task_image", taskImage);
+        if (solutionImage) formData.append("solution_image", solutionImage);
         formData.append("correct_option", correctOption);
         formData.append("answer_type", answerType);
+        formData.append("task_text", taskText);
+        formData.append("solution_text", solutionText);
 
         const res = await fetch(`${apiUrl}/api/admin/tasks`, {
           method: "POST",
@@ -534,10 +542,27 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
               )}
             </div>
 
-            {/* Task Image */}
+            {/* Task Text (LaTeX/Plain text) */}
             <div>
               <label className="block text-gray-700 font-medium mb-2">
-                Есеп суреті {!task && <span className="text-red-500">*</span>}
+                Есеп мәтіні (LaTeX немесе қарапайым мәтін) {!task && <span className="text-red-500">*</span>}
+              </label>
+              <textarea
+                value={taskText}
+                onChange={(e) => setTaskText(e.target.value)}
+                placeholder="Есепті мәтін форматында енгізіңіз. LaTeX үшін $ $ немесе $$ $$ қолданыңыз"
+                rows={6}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none font-mono"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                LaTeX мысалы: $x^2 + y^2 = r^2$ немесе $$\int_0^1 x^2 dx$$
+              </p>
+            </div>
+
+            {/* Task Image (Optional) */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                Есеп суреті (міндетті емес)
               </label>
               <input
                 type="file"
@@ -556,10 +581,24 @@ function TaskForm({ task, apiUrl, email, onClose, onSuccess, onError }: TaskForm
               )}
             </div>
 
-            {/* Solution Image */}
+            {/* Solution Text (LaTeX/Plain text) */}
             <div>
               <label className="block text-gray-700 font-medium mb-2">
-                Шешім суреті {!task && <span className="text-red-500">*</span>}
+                Шешім мәтіні (LaTeX немесе қарапайым мәтін)
+              </label>
+              <textarea
+                value={solutionText}
+                onChange={(e) => setSolutionText(e.target.value)}
+                placeholder="Шешімді мәтін форматында енгізіңіз"
+                rows={6}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none font-mono"
+              />
+            </div>
+
+            {/* Solution Image (Optional) */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                Шешім суреті (міндетті емес)
               </label>
               <input
                 type="file"
