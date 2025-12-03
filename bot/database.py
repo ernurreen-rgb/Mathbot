@@ -108,12 +108,9 @@ async def init_db() -> None:
             "ALTER TABLE web_users ADD COLUMN weekly_points INTEGER DEFAULT 0",
             "ALTER TABLE users ADD COLUMN league_group_id INTEGER",
             "ALTER TABLE web_users ADD COLUMN league_group_id INTEGER",
-            "ALTER TABLE tasks ADD COLUMN task_text TEXT",
-            "ALTER TABLE tasks ADD COLUMN solution_text TEXT",
-            "ALTER TABLE tasks ADD COLUMN option_a_text TEXT",
-            "ALTER TABLE tasks ADD COLUMN option_b_text TEXT",
-            "ALTER TABLE tasks ADD COLUMN option_c_text TEXT",
-            "ALTER TABLE tasks ADD COLUMN option_d_text TEXT"
+            "ALTER TABLE tasks ADD COLUMN ai_solution_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN ai_solution_status TEXT DEFAULT 'none'",
+            "ALTER TABLE tasks ADD COLUMN ai_solution_requested_at TIMESTAMP"
         ]
         for sql in migrations:
             try:
@@ -349,6 +346,51 @@ async def update_option_text(task_id: int, option: str, text: str) -> None:
         column = f"option_{option}_text"
         await conn.execute(f"UPDATE tasks SET {column} = ? WHERE id = ?", (text, task_id))
         await conn.commit()
+
+
+# ==================== AI SOLUTION MANAGEMENT ====================
+async def update_ai_solution(task_id: int, ai_solution_text: str, status: str = 'pending') -> None:
+    """Update AI-generated solution for a task"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        await conn.execute(
+            """UPDATE tasks 
+               SET ai_solution_text = ?, ai_solution_status = ?, ai_solution_requested_at = CURRENT_TIMESTAMP 
+               WHERE id = ?""",
+            (ai_solution_text, status, task_id)
+        )
+        await conn.commit()
+
+
+async def approve_ai_solution(task_id: int) -> None:
+    """Approve AI solution for a task"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        await conn.execute(
+            "UPDATE tasks SET ai_solution_status = 'approved' WHERE id = ?",
+            (task_id,)
+        )
+        await conn.commit()
+
+
+async def reject_ai_solution(task_id: int) -> None:
+    """Reject AI solution for a task"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        await conn.execute(
+            "UPDATE tasks SET ai_solution_status = 'rejected' WHERE id = ?",
+            (task_id,)
+        )
+        await conn.commit()
+
+
+async def get_ai_solution_status(task_id: int) -> Optional[Dict[str, Any]]:
+    """Get AI solution status for a task"""
+    async with aiosqlite.connect(DB_NAME, timeout=30.0) as conn:
+        conn.row_factory = aiosqlite.Row
+        async with conn.execute(
+            "SELECT ai_solution_text, ai_solution_status, ai_solution_requested_at FROM tasks WHERE id = ?",
+            (task_id,)
+        ) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
 
 
 
