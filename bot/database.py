@@ -107,7 +107,13 @@ async def init_db() -> None:
             "ALTER TABLE web_users ADD COLUMN league TEXT DEFAULT 'bronze'",
             "ALTER TABLE web_users ADD COLUMN weekly_points INTEGER DEFAULT 0",
             "ALTER TABLE users ADD COLUMN league_group_id INTEGER",
-            "ALTER TABLE web_users ADD COLUMN league_group_id INTEGER"
+            "ALTER TABLE web_users ADD COLUMN league_group_id INTEGER",
+            "ALTER TABLE tasks ADD COLUMN task_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN solution_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN option_a_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN option_b_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN option_c_text TEXT",
+            "ALTER TABLE tasks ADD COLUMN option_d_text TEXT"
         ]
         for sql in migrations:
             try:

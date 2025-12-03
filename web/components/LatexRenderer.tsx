@@ -21,9 +21,18 @@ export default function LatexRenderer({ text, className = "" }: LatexRendererPro
           const container = containerRef.current;
           container.innerHTML = "";
 
+          // Check if text contains LaTeX delimiters
+          const hasDelimiters = text.includes("$");
+          
+          // Auto-detect bare LaTeX: if no $ delimiters but contains backslash and LaTeX commands
+          const isBareLatex = !hasDelimiters && /\\[a-zA-Z]+/.test(text);
+          
+          // If it's bare LaTeX from MathEditor, wrap it in $ delimiters
+          const processedText = isBareLatex ? `$${text}$` : text;
+
           // Split text by LaTeX delimiters
           // Check for display math ($$) first, then inline math ($)
-          const parts = text.split(/(\$\$[\s\S]*?\$\$|\$(?!\$)[^\$]+?\$(?!\$))/);
+          const parts = processedText.split(/(\$\$[\s\S]*?\$\$|\$(?!\$)[^\$]+?\$(?!\$))/);
           
           parts.forEach((part) => {
             if (part.startsWith("$$") && part.endsWith("$$")) {
