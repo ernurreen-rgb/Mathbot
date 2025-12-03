@@ -238,7 +238,7 @@ async def test_prompt_building():
     # Import only the specific function to avoid loading full aiogram dependency
     import sys
     sys.path.insert(0, str(Path(__file__).parent))
-    from ai_service import _build_solution_prompt
+    from ai_service import build_solution_prompt
     
     # Test quiz task
     quiz_task = {
@@ -251,7 +251,7 @@ async def test_prompt_building():
         "correct_option": "A"
     }
     
-    prompt1 = _build_solution_prompt(quiz_task)
+    prompt1 = build_solution_prompt(quiz_task)
     assert "Есеп:" in prompt1, "Prompt should include task label"
     assert quiz_task["task_text"] in prompt1, "Prompt should include task text"
     assert "Тест (A/B/C/D)" in prompt1, "Prompt should indicate quiz type"
@@ -266,7 +266,7 @@ async def test_prompt_building():
         "correct_option": "5"
     }
     
-    prompt2 = _build_solution_prompt(text_task)
+    prompt2 = build_solution_prompt(text_task)
     assert "Қолмен енгізу" in prompt2, "Prompt should indicate text input type"
     assert "жауап:** 5" in prompt2, "Prompt should include correct answer"
     print("✓ Text input task prompt built correctly")
@@ -278,7 +278,7 @@ async def test_prompt_building():
         "correct_option": "B"
     }
     
-    prompt3 = _build_solution_prompt(image_task)
+    prompt3 = build_solution_prompt(image_task)
     assert "(суретте берілген)" in prompt3, "Prompt should indicate image-based task"
     print("✓ Image-based task prompt built correctly")
     

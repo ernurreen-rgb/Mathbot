@@ -9,6 +9,11 @@ It should be run while the server (main.py) is running.
 import asyncio
 import aiohttp
 import sys
+from pathlib import Path
+
+# Add bot directory to path for database import
+sys.path.insert(0, str(Path(__file__).parent))
+import database as db
 
 # Base URL for the API
 BASE_URL = "http://localhost:8000"
@@ -85,7 +90,6 @@ async def test_ai_solution_api():
                         print(f"  (This is expected if you don't have an API key)")
                         # Continue with manual AI solution for testing
                         print("\n  Setting AI solution manually for testing...")
-                        import database as db
                         await db.update_ai_solution(
                             task_id,
                             "**Шешімі:**\n\n$2 + 2 = 4$\n\nБұл қарапайым қосу.",

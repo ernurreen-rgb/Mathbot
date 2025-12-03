@@ -139,7 +139,7 @@ async def main():
     print("\n[7] Testing AI prompt building...")
     try:
         task = await db.get_task(task_id)
-        prompt = ai_service._build_solution_prompt(task)
+        prompt = ai_service.build_solution_prompt(task)
         
         if all([
             "Есеп:" in prompt,
