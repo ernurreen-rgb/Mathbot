@@ -41,6 +41,7 @@ async def main():
     
     # Test 2: Create a test task
     print("\n[2] Creating test task...")
+    manual_solution_text = "Жауабы: $2 + 2 = 4$"
     try:
         task_id = await db.add_task(
             image_path="",
@@ -49,7 +50,7 @@ async def main():
             answer_type="quiz",
             created_by=0,
             task_text="Тест есеп: $2 + 2 = ?$",
-            solution_text="Жауабы: $2 + 2 = 4$",
+            solution_text=manual_solution_text,
             option_a_text="4",
             option_b_text="5",
             option_c_text="3",
@@ -126,7 +127,7 @@ async def main():
         await db.reject_ai_solution(task_id)
         task = await db.get_task(task_id)
         solution = get_solution_text_for_task(task)
-        if solution == "Жауабы: $2 + 2 = 4$":  # Manual solution
+        if solution == manual_solution_text:  # Manual solution
             print("✓ Solution priority: Rejected AI falls back to manual")
         else:
             print(f"✗ Wrong solution after rejection")

@@ -9,6 +9,7 @@ It should be run while the server (main.py) is running.
 import asyncio
 import aiohttp
 import sys
+import os
 from pathlib import Path
 
 # Add bot directory to path for database import
@@ -18,8 +19,8 @@ import database as db
 # Base URL for the API
 BASE_URL = "http://localhost:8000"
 
-# Admin email for authentication
-ADMIN_EMAIL = "ernurreen@gmail.com"
+# Admin email for authentication (configurable via environment variable)
+ADMIN_EMAIL = os.getenv("TEST_ADMIN_EMAIL", "ernurreen@gmail.com")
 
 
 async def test_ai_solution_api():
