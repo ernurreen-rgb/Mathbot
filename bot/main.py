@@ -1329,9 +1329,8 @@ async def main():
     async def start_bot_polling():
         if not bot:
             print("Telegram bot not initialized, skipping polling")
-            # Keep task alive but do nothing - sleep indefinitely
-            while True:
-                await asyncio.sleep(3600)  # Sleep for 1 hour at a time
+            # Suspend indefinitely without consuming resources
+            await asyncio.Event().wait()
         
         try:
             print("Starting Telegram bot polling...")
