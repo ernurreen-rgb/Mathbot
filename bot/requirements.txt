@@ -1,11 +1,9 @@
-aiogram==3.0.0b7
-fastapi==0.109.2
+aiogram>=3.22.0
+fastapi>=0.115.0
 uvicorn[standard]==0.27.1
 aiosqlite==0.19.0
-aiofiles==23.1.0
-pydantic==1.10.14
 python-multipart==0.0.6
 # Note: aiohttp is used by ai_service.py for OpenAI API calls
 # It may be included as a transitive dependency of aiogram, but we list it explicitly
 # to ensure it's available. Use a compatible version range.
-aiohttp>=3.13.0
+# Note: aiofiles and pydantic will be automatically installed by aiogram with compatible versions
