@@ -675,8 +675,6 @@ async def admin_get_ai_solution(
 
 # ========== НАСТРОЙКИ ==========
 TOKEN = os.getenv("BOT_TOKEN")
-if not TOKEN:
-    raise ValueError("BOT_TOKEN environment variable is required")
 ADMIN_IDS = {5423071866}
 
 # Директории - use absolute paths based on script location
@@ -686,8 +684,19 @@ IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 SOLUTIONS_DIR = BASE_DIR / "solutions"
 SOLUTIONS_DIR.mkdir(parents=True, exist_ok=True)
 
-bot = Bot(token=TOKEN)
+# Initialize bot and dispatcher only if TOKEN is available
+bot = None
 dp = Dispatcher()
+
+if TOKEN:
+    try:
+        bot = Bot(token=TOKEN)
+        print("Telegram bot initialized successfully")
+    except Exception as e:
+        print(f"Failed to initialize Telegram bot: {e}")
+        print("Website API will run without Telegram bot functionality")
+else:
+    print("BOT_TOKEN not set. Running without Telegram bot functionality.")
 
 
 # ========== MIDDLEWARE И ФИЛЬТРЫ ==========
@@ -1301,16 +1310,42 @@ async def weekly_reset_task():
 
 async def main():
     await db.init_db()
-    dp.message.middleware(RegisterUserMiddleware())
-    dp.callback_query.middleware(RegisterUserMiddleware())
-    print("Bot and API started...")
-
-    fastapi_task = asyncio.create_task(start_fastapi())
-    weekly_task = asyncio.create_task(weekly_reset_task())
-    polling_task = asyncio.create_task(dp.start_polling(bot))
     
-    # Run all tasks concurrently
-    await asyncio.gather(fastapi_task, weekly_task, polling_task)
+    # Only register middleware if bot is available
+    if bot:
+        dp.message.middleware(RegisterUserMiddleware())
+        dp.callback_query.middleware(RegisterUserMiddleware())
+        print("Telegram bot middleware registered")
+    
+    print("Starting services...")
+
+    # Start FastAPI server (critical for website functionality)
+    fastapi_task = asyncio.create_task(start_fastapi())
+    
+    # Start weekly reset task (non-critical)
+    weekly_task = asyncio.create_task(weekly_reset_task())
+    
+    # Start Telegram bot polling only if bot is initialized
+    async def start_bot_polling():
+        if not bot:
+            print("Telegram bot not initialized, skipping polling")
+            # Keep task alive but do nothing
+            while True:
+                await asyncio.sleep(3600)
+            return
+        
+        try:
+            print("Starting Telegram bot polling...")
+            await dp.start_polling(bot)
+        except Exception as e:
+            print(f"Telegram bot polling failed: {e}")
+            print("Website API will continue to run.")
+    
+    polling_task = asyncio.create_task(start_bot_polling())
+    
+    # Run all tasks concurrently, but don't let bot failure crash the server
+    # Return when any task completes (usually they should run forever)
+    await asyncio.gather(fastapi_task, weekly_task, polling_task, return_exceptions=True)
 
 if __name__ == "__main__":
     try:
