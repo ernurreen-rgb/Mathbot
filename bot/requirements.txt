@@ -3,7 +3,5 @@ fastapi>=0.115.0
 uvicorn[standard]==0.27.1
 aiosqlite==0.19.0
 python-multipart==0.0.6
-# Note: aiohttp is used by ai_service.py for OpenAI API calls
-# It may be included as a transitive dependency of aiogram, but we list it explicitly
-# to ensure it's available. Use a compatible version range.
-# Note: aiofiles and pydantic will be automatically installed by aiogram with compatible versions
+# Note: aiohttp, aiofiles, and pydantic are automatically installed by aiogram with compatible versions
+# aiogram requires aiohttp for Telegram Bot API calls, and ai_service.py uses it for OpenAI API calls
