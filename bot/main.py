@@ -66,7 +66,7 @@ VALID_QUIZ_OPTIONS = ["A", "B", "C", "D"]
 
 # Admin emails that have access to admin panel (can be configured via environment variable)
 # Format: comma-separated list of emails, e.g., "ernurreen@gmail.com"
-_admin_emails_env = os.getenv("ADMIN_EMAILS", "ernurreen@gmail.com")
+_admin_emails_env = os.getenv("ADMIN_EMAILS", "Allernur2005@gmail.com")
 ADMIN_EMAILS = {email.strip().lower() for email in _admin_emails_env.split(",") if email.strip()}
 
 def convert_to_relative_path(absolute_path: Optional[str], url_prefix: str) -> Optional[str]:
