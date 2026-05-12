@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { MathfieldElement } from "mathlive";
 
 interface MathEditorProps {
   value: string;
@@ -11,7 +12,7 @@ interface MathEditorProps {
 }
 
 export default function MathEditor({ value, onChange, placeholder, className }: MathEditorProps) {
-  const mathFieldRef = useRef<any>(null);
+  const mathFieldRef = useRef<MathfieldElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export default function MathEditor({ value, onChange, placeholder, className }: 
       if (mathFieldRef.current) {
         try {
           mathFieldRef.current.remove();
-        } catch (e) {
+        } catch {
           // Fallback to removeChild if remove() fails
           if (containerRef.current && containerRef.current.contains(mathFieldRef.current)) {
             containerRef.current.removeChild(mathFieldRef.current);

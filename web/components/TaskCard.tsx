@@ -1,21 +1,33 @@
-// web/component/TaskCard.tsx
+// web/components/TaskCard.tsx
 "use client";
 import { useState } from "react";
 
-export default function TaskCard() {
-  const [task, setTask] = useState<any>(null);
+interface TaskCardTask {
+  image_path: string;
+}
 
-  // URL FastAPI backend (production)
-  const API_URL = "https://mathbot-nu.vercel.app";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+function buildAssetUrl(path: string) {
+  if (path.startsWith("http")) return path;
+  return `${API_URL}/${path.replace(/^[\\/]+/, "")}`;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Белгісіз қате";
+}
+
+export default function TaskCard() {
+  const [task, setTask] = useState<TaskCardTask | null>(null);
 
   const getTask = async () => {
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(`${API_URL}/api/task/random`);
       if (!res.ok) throw new Error("Не удалось получить задачу");
       const data = await res.json();
       setTask(data);
-    } catch (e) {
-      alert("Ошибка при получении задачи: " + (e as Error).message);
+    } catch (error) {
+      alert("Ошибка при получении задачи: " + getErrorMessage(error));
     }
   };
 
@@ -28,11 +40,7 @@ export default function TaskCard() {
       {task && (
         <div className="mt-8">
           <img
-            src={
-              task.image_path.startsWith("http")
-                ? task.image_path
-                : `https://mathbot-nu.vercel.app/${task.image_path.replace(/^\\|^\//, "")}`
-            }
+            src={buildAssetUrl(task.image_path)}
             alt="Есеп"
             className="rounded-lg shadow-md"
           />
